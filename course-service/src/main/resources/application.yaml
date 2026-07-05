@@ -1,0 +1,106 @@
+server:
+  port: 8083
+  servlet:
+    context-path: /api/v1
+  shutdown: graceful
+  http2:
+    enabled: true
+
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+spring:
+  application:
+    name: lms-course-service
+  config:
+    import: optional:classpath:application-base.yaml
+  datasource:
+    driverClassName: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/lms_course_service?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
+    username: root
+    password: root
+    hikari:
+      schema: lms_course_service
+  cloud:
+    consul:
+      host: localhost
+      port: 8500
+      config:
+        enabled: false
+      discovery:
+        enabled: true
+        instance-id: ${spring.application.name}-${server.port}
+        service-name: ${spring.application.name}
+        health-check-path: /actuator/health
+        prefer-ip-address: true
+        health-check-interval: 15s
+        register: true
+        deregister: true
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    open-in-view: false
+
+config:
+  service-name: lms-course-service
+  api:
+    prefix:
+      public: api
+      internal: internal
+      admin: admin
+    version: v1
+    public:
+      course-category:
+        get-all: ${config.api.prefix.public}/${config.api.version}/course-categories
+        create: ${config.api.prefix.public}/${config.api.version}/course-categories
+        get-detail: ${config.api.prefix.public}/${config.api.version}/course-categories/{id}
+        update: ${config.api.prefix.public}/${config.api.version}/course-categories/{id}
+        delete: ${config.api.prefix.public}/${config.api.version}/course-categories/{id}
+      course:
+        get-all: ${config.api.prefix.public}/${config.api.version}/courses
+        create: ${config.api.prefix.public}/${config.api.version}/courses
+        get-detail: ${config.api.prefix.public}/${config.api.version}/courses/{id}
+        update: ${config.api.prefix.public}/${config.api.version}/courses/{id}
+        delete: ${config.api.prefix.public}/${config.api.version}/courses/{id}
+        submit-review: ${config.api.prefix.public}/${config.api.version}/courses/{id}/submit-review
+        archive: ${config.api.prefix.public}/${config.api.version}/courses/{id}/archive
+      lesson:
+        get-all: ${config.api.prefix.public}/${config.api.version}/lessons
+        create: ${config.api.prefix.public}/${config.api.version}/lessons
+        get-by-course: ${config.api.prefix.public}/${config.api.version}/courses/{courseId}/lessons
+        create-by-course: ${config.api.prefix.public}/${config.api.version}/courses/{courseId}/lessons
+        get-detail: ${config.api.prefix.public}/${config.api.version}/lessons/{id}
+        update: ${config.api.prefix.public}/${config.api.version}/lessons/{id}
+        delete: ${config.api.prefix.public}/${config.api.version}/lessons/{id}
+      image:
+        upload-course-image: ${config.api.prefix.public}/${config.api.version}/courses/{id}/images
+        create: ${config.api.prefix.public}/${config.api.version}/images
+        get-detail: ${config.api.prefix.public}/${config.api.version}/images/{id}
+        delete: ${config.api.prefix.public}/${config.api.version}/images/{id}
+      lesson-resource:
+        upload-lesson-resource: ${config.api.prefix.public}/${config.api.version}/lessons/{id}/resources
+        create: ${config.api.prefix.public}/${config.api.version}/lesson-resources
+        get-detail: ${config.api.prefix.public}/${config.api.version}/lesson-resources/{id}
+        delete: ${config.api.prefix.public}/${config.api.version}/lesson-resources/{id}
+    admin:
+      course:
+        approve: ${config.api.prefix.admin}/${config.api.version}/courses/{id}/approve
+        reject: ${config.api.prefix.admin}/${config.api.version}/courses/{id}/reject
+    internal:
+      course:
+        get-detail: ${config.api.prefix.internal}/${config.api.version}/courses/{id}
+        get-published-course: ${config.api.prefix.internal}/${config.api.version}/courses/{id}/published
+      lesson:
+        get-course-lessons: ${config.api.prefix.internal}/${config.api.version}/courses/{courseId}/lessons
+  minio:
+    url: http://localhost:9000
+    access-key: minioadmin
+    secret-key: minioadmin
+    bucket: lms-mini

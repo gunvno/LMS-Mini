@@ -1,0 +1,29 @@
+FROM maven:3.9.9-eclipse-temurin-17 AS build
+WORKDIR /workspace
+
+ARG SERVICE_NAME
+
+COPY base-service/pom.xml base-service/pom.xml
+COPY ${SERVICE_NAME}/pom.xml ${SERVICE_NAME}/pom.xml
+
+RUN --mount=type=cache,target=/root/.m2 \
+    cd base-service && mvn -q -DskipTests dependency:go-offline
+
+COPY base-service/src base-service/src
+RUN --mount=type=cache,target=/root/.m2 \
+    cd base-service && mvn -q -DskipTests install
+
+RUN --mount=type=cache,target=/root/.m2 \
+    cd ${SERVICE_NAME} && mvn -q -DskipTests dependency:go-offline
+
+COPY ${SERVICE_NAME}/src ${SERVICE_NAME}/src
+
+RUN --mount=type=cache,target=/root/.m2 \
+    cd ${SERVICE_NAME} && mvn -q -DskipTests package
+
+FROM eclipse-temurin:17.0.17_10-jre-ubi9-minimal
+ARG SERVICE_NAME
+ENV TZ=Asia/Ho_Chi_Minh
+WORKDIR /app
+COPY --from=build /workspace/${SERVICE_NAME}/target/${SERVICE_NAME}-1.0.0.jar /app/service.jar
+ENTRYPOINT ["java", "-jar", "/app/service.jar"]

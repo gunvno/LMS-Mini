@@ -1,0 +1,301 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: lms-mini-mysql
+    profiles:
+      - mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      TZ: Asia/Ho_Chi_Minh
+    ports:
+      - "3306:3306"
+    volumes:
+      - lms-mini-mysql-data:/var/lib/mysql
+      - ./database/init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  consul:
+    image: hashicorp/consul:1.20
+    container_name: lms-mini-consul
+    restart: unless-stopped
+    command: agent -dev -client=0.0.0.0
+    ports:
+      - "8500:8500"
+    healthcheck:
+      test: ["CMD", "consul", "members"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: lms-mini-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    container_name: lms-mini-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - lms-mini-minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  api-gateway:
+    container_name: lms-api-gateway-service
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    restart: unless-stopped
+    depends_on:
+      consul:
+        condition: service_healthy
+    environment:
+      SPRING_CLOUD_CONSUL_HOST: consul
+      SPRING_CLOUD_CONSUL_PORT: 8500
+      CONFIG_API_AUTHN: authn-service:8081
+      CONFIG_API_AUTHOR: author-service:8082
+      CONFIG_API_COURSE: course-service:8083
+      CONFIG_API_LEARNING: learning-service:8084
+      CONFIG_API_QUIZ: quiz-service:8085
+      CONFIG_API_NOTICE: notice-service:8086
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./api-gateway/logs:/app/logs
+
+  authn-service:
+    container_name: lms-authn-service
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        SERVICE_NAME: authn-service
+    restart: unless-stopped
+    depends_on:
+      consul:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/lms_authn_service?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_SCHEMA: lms_authn_service
+      SPRING_CLOUD_CONSUL_HOST: consul
+      SPRING_CLOUD_CONSUL_PORT: 8500
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      CONFIG_MINIO_URL: http://minio:9000
+      CONFIG_MINIO_ACCESS_KEY: minioadmin
+      CONFIG_MINIO_SECRET_KEY: minioadmin
+      CONFIG_MINIO_BUCKET: lms-mini
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./authn-service/logs:/app/logs
+
+  author-service:
+    container_name: lms-author-service
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        SERVICE_NAME: author-service
+    restart: unless-stopped
+    depends_on:
+      consul:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/lms_author_service?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_SCHEMA: lms_author_service
+      SPRING_CLOUD_CONSUL_HOST: consul
+      SPRING_CLOUD_CONSUL_PORT: 8500
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      CONFIG_MINIO_URL: http://minio:9000
+      CONFIG_MINIO_ACCESS_KEY: minioadmin
+      CONFIG_MINIO_SECRET_KEY: minioadmin
+      CONFIG_MINIO_BUCKET: lms-mini
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./author-service/logs:/app/logs
+
+  course-service:
+    container_name: lms-course-service
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        SERVICE_NAME: course-service
+    restart: unless-stopped
+    depends_on:
+      consul:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/lms_course_service?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_SCHEMA: lms_course_service
+      SPRING_CLOUD_CONSUL_HOST: consul
+      SPRING_CLOUD_CONSUL_PORT: 8500
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      CONFIG_MINIO_URL: http://minio:9000
+      CONFIG_MINIO_ACCESS_KEY: minioadmin
+      CONFIG_MINIO_SECRET_KEY: minioadmin
+      CONFIG_MINIO_BUCKET: lms-mini
+    ports:
+      - "8083:8083"
+    volumes:
+      - ./course-service/logs:/app/logs
+
+  learning-service:
+    container_name: lms-learning-service
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        SERVICE_NAME: learning-service
+    restart: unless-stopped
+    depends_on:
+      consul:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/lms_learning_service?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_SCHEMA: lms_learning_service
+      SPRING_CLOUD_CONSUL_HOST: consul
+      SPRING_CLOUD_CONSUL_PORT: 8500
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      CONFIG_MINIO_URL: http://minio:9000
+      CONFIG_MINIO_ACCESS_KEY: minioadmin
+      CONFIG_MINIO_SECRET_KEY: minioadmin
+      CONFIG_MINIO_BUCKET: lms-mini
+    ports:
+      - "8084:8084"
+    volumes:
+      - ./learning-service/logs:/app/logs
+
+  quiz-service:
+    container_name: lms-quiz-service
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        SERVICE_NAME: quiz-service
+    restart: unless-stopped
+    depends_on:
+      consul:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/lms_quiz_service?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_SCHEMA: lms_quiz_service
+      SPRING_CLOUD_CONSUL_HOST: consul
+      SPRING_CLOUD_CONSUL_PORT: 8500
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      CONFIG_MINIO_URL: http://minio:9000
+      CONFIG_MINIO_ACCESS_KEY: minioadmin
+      CONFIG_MINIO_SECRET_KEY: minioadmin
+      CONFIG_MINIO_BUCKET: lms-mini
+    ports:
+      - "8085:8085"
+    volumes:
+      - ./quiz-service/logs:/app/logs
+
+  notice-service:
+    container_name: lms-notice-service
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        SERVICE_NAME: notice-service
+    restart: unless-stopped
+    depends_on:
+      consul:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/lms_notice_service?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_SCHEMA: lms_notice_service
+      SPRING_CLOUD_CONSUL_HOST: consul
+      SPRING_CLOUD_CONSUL_PORT: 8500
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      CONFIG_MINIO_URL: http://minio:9000
+      CONFIG_MINIO_ACCESS_KEY: minioadmin
+      CONFIG_MINIO_SECRET_KEY: minioadmin
+      CONFIG_MINIO_BUCKET: lms-mini
+    ports:
+      - "8086:8086"
+    volumes:
+      - ./notice-service/logs:/app/logs
+
+volumes:
+  lms-mini-mysql-data:
+  lms-mini-minio-data:

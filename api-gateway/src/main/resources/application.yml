@@ -1,0 +1,97 @@
+server:
+  http2:
+    enabled: true
+  port: 8080
+  servlet:
+    context-path: /
+  shutdown: graceful
+
+management:
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: "info,health,prometheus,metrics"
+  endpoint:
+    health:
+      show-details: ALWAYS
+
+config:
+  service-name: ev-api-gateway-service
+  api:
+    authn: localhost
+
+spring:
+  profiles:
+    active: @active.mode@
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  application:
+    name: ${config.service-name}
+  cloud:
+    consul:
+      host: localhost
+      port: 8500
+      config:
+        enabled: false
+      discovery:
+        enabled: true
+        instance-id: ${config.service-name}
+        service-name: ${config.service-name}
+        health-check-path: /actuator/health
+        prefer-ip-address: true
+        prefer-agent-address: false
+        health-check-interval: 25s
+        health-check-critical-timeout: 90s
+        register: true
+        deregister: true
+    gateway:
+      server:
+        webflux:
+          default-filters:
+            - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin RETAIN_UNIQUE
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowed-origins: "*"
+                allowed-methods: "*"
+                allowed-headers: "*"
+                allow-credentials: false
+          discovery:
+            locator:
+              enabled: true
+              lower-case-service-id: true
+          routes:
+            - id: ev-authentication-service
+              uri: lb://ev-authentication-service
+              predicates:
+                - Path=/authn/**
+              filters:
+                - RewritePath=/authn/(?<path>.*), /$\{path}
+            - id: ev-authorization-service
+              uri: lb://ev-authorization-service
+              predicates:
+                - Path=/author/**
+              filters:
+                - RewritePath=/author/(?<path>.*), /$\{path}
+  main:
+    allow-bean-definition-overriding: true
+  mvc:
+    problemdetails:
+      enabled: true
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  show-actuator: false
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    urls-primary-name: "ev-api-gateway-service"
+    urls:
+      - name: ev-api-gateway-service
+        url: /v3/api-docs

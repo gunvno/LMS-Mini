@@ -1,0 +1,107 @@
+# =========================
+# Common
+# =========================
+common:
+  success: "Thành công"
+  failed: "Thất bại"
+  unauthorized: "Bạn không có quyền truy cập tài nguyên này"
+  forbidden: "Truy cập bị từ chối"
+  invalid_request: "Yêu cầu không hợp lệ"
+  internal_error: "Lỗi hệ thống, vui lòng thử lại sau"
+  already_exists: "Dữ liệu đã tồn tại"
+  not_found: "Không tìm thấy dữ liệu"
+  invalid_input: "Kiểm tra lại thông tin nhập"
+  max_file_size_exceed: "Kích thước ảnh tối đa: 5MB"
+
+# =========================
+# Validation
+# =========================
+validation:
+  required_field: "Trường {0} là bắt buộc"
+  invalid_format: "Định dạng của {0} không hợp lệ"
+  min_length: "{0} phải có ít nhất {1} ký tự"
+  max_length: "{0} không được vượt quá {1} ký tự"
+  email_invalid: "Email không hợp lệ"
+  phone_invalid: "Số điện thoại không hợp lệ"
+
+# =========================
+# User Management
+# =========================
+user:
+  not_found: "Không tìm thấy người dùng"
+  already_exists: "Người dùng đã tồn tại"
+  created: "Tạo người dùng thành công"
+  updated: "Cập nhật người dùng thành công"
+  deleted: "Xóa người dùng thành công"
+  login_failed: "Sai tên đăng nhập hoặc mật khẩu"
+  locked: "Tài khoản đã bị khóa"
+
+# =========================
+# Role & Permission (Salesforce style)
+# =========================
+role:
+  not_found: "Không tìm thấy vai trò"
+  already_exists: "Vai trò đã tồn tại"
+  assigned_success: "Gán vai trò thành công"
+  removed_success: "Gỡ bỏ vai trò thành công"
+
+permission:
+  not_found: "Không tìm thấy quyền"
+  no_access: "Bạn không có quyền thực hiện hành động này"
+  assigned_success: "Gán quyền thành công"
+  removed_success: "Gỡ bỏ quyền thành công"
+
+# =========================
+# Product / Service
+# =========================
+product:
+  not_found: "Không tìm thấy sản phẩm/dịch vụ"
+  already_exists: "Sản phẩm/dịch vụ đã tồn tại"
+  created: "Tạo sản phẩm/dịch vụ thành công"
+  updated: "Cập nhật sản phẩm/dịch vụ thành công"
+  deleted: "Xóa sản phẩm/dịch vụ thành công"
+
+# =========================
+# Order / Transaction
+# =========================
+order:
+  not_found: "Không tìm thấy đơn hàng"
+  created: "Tạo đơn hàng thành công"
+  updated: "Cập nhật đơn hàng thành công"
+  canceled: "Hủy đơn hàng thành công"
+  payment_failed: "Thanh toán thất bại"
+  payment_success: "Thanh toán thành công"
+
+# =========================
+# Security & Auth
+# =========================
+security:
+  invalid_token: "Token không hợp lệ hoặc đã hết hạn"
+  expired_token: "Phiên đăng nhập đã hết hạn"
+  access_denied: "Bạn không có quyền truy cập tài nguyên này"
+  session_timeout: "Phiên làm việc đã hết hạn, vui lòng đăng nhập lại"
+
+# =========================
+# System & Integration
+# =========================
+system:
+  service_unavailable: "Dịch vụ tạm thời không khả dụng"
+  integration_error: "Lỗi khi kết nối tới hệ thống bên ngoài"
+  timeout: "Hệ thống phản hồi quá lâu"
+
+# =========================
+# import excel
+# =========================
+import_excel:
+  required_field: " là bắt buộc"
+  incorrect_format: " không đúng định dạng"
+  must_greater: " phải >= "
+  must_less: " phải <= "
+  character: " ký tự"
+
+quiz:
+  not_found: "Không tìm thấy quiz"
+  invalid_status: "Trạng thái quiz không hợp lệ"
+
+question:
+  not_found: "Không tìm thấy câu hỏi"

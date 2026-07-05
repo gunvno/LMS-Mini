@@ -1,0 +1,76 @@
+server:
+  port: 8082
+  shutdown: graceful
+  http2:
+    enabled: true
+
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+spring:
+  application:
+    name: lms-author-service
+  config:
+    import: optional:classpath:application-base.yaml
+  datasource:
+    driverClassName: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/lms_author_service?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
+    username: root
+    password: root
+    hikari:
+      schema: lms_author_service
+  cloud:
+    consul:
+      host: localhost
+      port: 8500
+      config:
+        enabled: false
+      discovery:
+        enabled: true
+        instance-id: ${spring.application.name}-${server.port}
+        service-name: ${spring.application.name}
+        health-check-path: /actuator/health
+        prefer-ip-address: true
+        health-check-interval: 15s
+        register: true
+        deregister: true
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    open-in-view: false
+
+config:
+  service-name: lms-author-service
+  api:
+    prefix:
+      public: api
+      internal: internal
+      admin: admin
+    version: v1
+    authn: localhost:8081
+    author: localhost:8082
+    course: localhost:8083
+    learning: localhost:8084
+    quiz: localhost:8085
+    notice: localhost:8086
+    public:
+      role:
+        get-all: ${config.api.prefix.public}/${config.api.version}/roles
+        create: ${config.api.prefix.public}/${config.api.version}/roles
+        get-detail: ${config.api.prefix.public}/${config.api.version}/roles/{id}
+        update: ${config.api.prefix.public}/${config.api.version}/roles/{id}
+        delete: ${config.api.prefix.public}/${config.api.version}/roles/{id}
+      user-role:
+        assign: ${config.api.prefix.public}/${config.api.version}/user-roles
+        remove: ${config.api.prefix.public}/${config.api.version}/user-roles
+        get-user-roles: ${config.api.prefix.public}/${config.api.version}/users/{userId}/roles
+    internal:
+      role:
+        get-users-by-role: ${config.api.prefix.internal}/${config.api.version}/roles/{roleCode}/users

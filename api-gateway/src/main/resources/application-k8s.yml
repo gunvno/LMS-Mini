@@ -1,0 +1,60 @@
+server:
+  http2:
+    enabled: true
+  port: 8080
+  servlet:
+    context-path: /
+  shutdown: graceful
+
+spring:
+  application:
+    name: ${config.service-name}
+  cloud:
+    consul:
+      enabled: true
+      config:
+        enabled: false
+      discovery:
+        enabled: true
+        instance-id: ${KUBERNETES_POD_NAME}
+        service-name: ${config.service-name}
+        health-check-path: /actuator/health
+        prefer-ip-address: true
+        prefer-agent-address: false
+        health-check-interval: 25s
+        health-check-critical-timeout: 90s
+        register: true
+        deregister: true
+      host: consul-server.consul.svc.cluster.local
+      port: 8500
+
+config:
+  service-name: ev-api-gateway-service
+  api:
+    authn: evcharge-authentication-svc.evcharge.svc.cluster.local
+    author: evcharge-authorization-svc.evcharge.svc.cluster.local
+    charge: evcharge-charge-svc.evcharge.svc.cluster.local
+    config: evcharge-config-svc.evcharge.svc.cluster.local
+    customer: evcharge-customer-svc.evcharge.svc.cluster.local
+    device: evcharge-device-svc.evcharge.svc.cluster.local
+    location: evcharge-location-svc.evcharge.svc.cluster.local
+    marketing: evcharge-marketing-svc.evcharge.svc.cluster.local
+    notification: evcharge-notification-svc.evcharge.svc.cluster.local
+    payment: evcharge-payment-svc.evcharge.svc.cluster.local
+    point: evcharge-point-svc.evcharge.svc.cluster.local
+    report: evcharge-report-svc.evcharge.svc.cluster.local
+    user: evcharge-user-svc.evcharge.svc.cluster.local
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  show-actuator: false
+  swagger-ui:
+    urls:
+      - name: ev-api-gateway-service
+        url: /v3/api-docs
+      - name: ev-authentication-service
+        url: /swagger-authn/v3/api-docs
+      - name: ev-authorization-service
+        url: /swagger-author/v3/api-docs

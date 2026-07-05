@@ -1,0 +1,4 @@
+AUTHN_993: "Your account has been temporarily locked. Please log in again after {0}"
+AUTHN_994: "Incorrect login information. Please try again."
+AUTHN_995: "Your account has been temporarily locked for {0} minutes due to more than {1} failed attempts."
+AUTHN_998: "LOGIN_METHOD_INVALID"

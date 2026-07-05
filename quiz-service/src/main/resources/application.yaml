@@ -1,0 +1,88 @@
+server:
+  port: 8085
+  servlet:
+    context-path: /api/v1
+  shutdown: graceful
+  http2:
+    enabled: true
+
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+spring:
+  application:
+    name: lms-quiz-service
+  config:
+    import: optional:classpath:application-base.yaml
+  datasource:
+    driverClassName: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/lms_quiz_service?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
+    username: root
+    password: root
+    hikari:
+      schema: lms_quiz_service
+  cloud:
+    consul:
+      host: localhost
+      port: 8500
+      config:
+        enabled: false
+      discovery:
+        enabled: true
+        instance-id: ${spring.application.name}-${server.port}
+        service-name: ${spring.application.name}
+        health-check-path: /actuator/health
+        prefer-ip-address: true
+        health-check-interval: 15s
+        register: true
+        deregister: true
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    open-in-view: false
+
+config:
+  service-name: lms-quiz-service
+  api:
+    prefix:
+      public: api
+      internal: internal
+      admin: admin
+    version: v1
+    public:
+      quiz:
+        get-all: ${config.api.prefix.public}/${config.api.version}/quizzes
+        create: ${config.api.prefix.public}/${config.api.version}/quizzes
+        get-detail: ${config.api.prefix.public}/${config.api.version}/quizzes/{id}
+        update: ${config.api.prefix.public}/${config.api.version}/quizzes/{id}
+        delete: ${config.api.prefix.public}/${config.api.version}/quizzes/{id}
+      question:
+        create-by-quiz: ${config.api.prefix.public}/${config.api.version}/quizzes/{id}/questions
+        get-detail: ${config.api.prefix.public}/${config.api.version}/questions/{id}
+        update: ${config.api.prefix.public}/${config.api.version}/questions/{id}
+        delete: ${config.api.prefix.public}/${config.api.version}/questions/{id}
+      answer:
+        create-by-question: ${config.api.prefix.public}/${config.api.version}/questions/{id}/answers
+        get-detail: ${config.api.prefix.public}/${config.api.version}/answers/{id}
+        update: ${config.api.prefix.public}/${config.api.version}/answers/{id}
+        delete: ${config.api.prefix.public}/${config.api.version}/answers/{id}
+      quiz-attempt:
+        start: ${config.api.prefix.public}/${config.api.version}/quizzes/{id}/attempts
+        submit: ${config.api.prefix.public}/${config.api.version}/quiz-attempts/{id}/submit
+        get-detail: ${config.api.prefix.public}/${config.api.version}/quiz-attempts/{id}
+    internal:
+      quiz:
+        get-required-result: ${config.api.prefix.internal}/${config.api.version}/quizzes/course/{courseId}/required-result
+        get-course-quizzes: ${config.api.prefix.internal}/${config.api.version}/courses/{courseId}/quizzes
+  minio:
+    url: http://localhost:9000
+    access-key: minioadmin
+    secret-key: minioadmin
+    bucket: lms-mini

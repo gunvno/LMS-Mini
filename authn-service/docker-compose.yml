@@ -1,0 +1,12 @@
+services:
+  api:
+    container_name: ev-authentication-service
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: atomi.digital.com/ev-services/authentication-service:v1
+    restart: always
+    ports:
+      - 8081:8081
+    volumes:
+      - ./logs:/app/logs

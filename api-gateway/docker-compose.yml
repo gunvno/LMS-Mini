@@ -1,0 +1,12 @@
+services:
+  api:
+    container_name: ev-api-service
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: atomi.digital.com/ev-services/api-gateway:v1
+    restart: always
+    ports:
+      - 8080:8080
+    volumes:
+      - ./logs:/app/logs

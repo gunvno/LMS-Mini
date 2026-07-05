@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Configuration status="WARN">
+    <Properties>
+        <Property name="log-path">logs</Property>
+    </Properties>
+
+    <Appenders>
+
+        <Console name="ConsoleAppender" target="SYSTEM_OUT"
+                 follow="true">
+            <PatternLayout>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%-5level] [%t] %c{1} - [%X{request-id}] %msg%n</pattern>
+            </PatternLayout>
+        </Console>
+        <RollingFile name="APPLICATION-LOG"
+                     fileName="${log-path}/application.log"
+                     filePattern="${log-path}/archived/application-%d{yyyy-MM-dd}.%i.txt.gz">
+            <PatternLayout charset="UTF-8">
+                <pattern>[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg %n
+                </pattern>
+            </PatternLayout>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="5MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="20"/>
+
+        </RollingFile>
+
+    </Appenders>
+
+    <appender name="OpenTelemetry"
+              class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
+        <captureExperimentalAttributes>true</captureExperimentalAttributes>
+        <captureKeyValuePairAttributes>true</captureKeyValuePairAttributes>
+    </appender>
+    <Loggers>
+        <Root level="INFO">
+            <AppenderRef ref="ConsoleAppender"/>
+            <AppenderRef ref="APPLICATION-LOG"/>
+        </Root>
+    </Loggers>
+
+</Configuration>

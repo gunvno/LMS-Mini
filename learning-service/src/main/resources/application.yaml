@@ -1,0 +1,81 @@
+server:
+  port: 8084
+  shutdown: graceful
+  http2:
+    enabled: true
+
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+spring:
+  application:
+    name: lms-learning-service
+  config:
+    import: optional:classpath:application-base.yaml
+  datasource:
+    driverClassName: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/lms_learning_service?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
+    username: root
+    password: root
+    hikari:
+      schema: lms_learning_service
+  cloud:
+    consul:
+      host: localhost
+      port: 8500
+      config:
+        enabled: false
+      discovery:
+        enabled: true
+        instance-id: ${spring.application.name}-${server.port}
+        service-name: ${spring.application.name}
+        health-check-path: /actuator/health
+        prefer-ip-address: true
+        health-check-interval: 15s
+        register: true
+        deregister: true
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    open-in-view: false
+
+config:
+  service-name: lms-learning-service
+  api:
+    prefix:
+      public: api
+      internal: internal
+      admin: admin
+    version: v1
+    public:
+      enrollment:
+        enroll-course: ${config.api.prefix.public}/${config.api.version}/courses/{courseId}/enroll
+        my-courses: ${config.api.prefix.public}/${config.api.version}/my-courses
+        get-detail: ${config.api.prefix.public}/${config.api.version}/enrollments/{id}
+        complete-course: ${config.api.prefix.public}/${config.api.version}/enrollments/{id}/complete
+      learning-progress:
+        start-lesson: ${config.api.prefix.public}/${config.api.version}/lessons/{lessonId}/start
+        complete-lesson: ${config.api.prefix.public}/${config.api.version}/lessons/{lessonId}/complete
+      certificate:
+        my-certificates: ${config.api.prefix.public}/${config.api.version}/my-certificates
+        verify-by-code: ${config.api.prefix.public}/${config.api.version}/certificates/{code}
+    internal:
+      enrollment:
+        get-detail: ${config.api.prefix.internal}/${config.api.version}/enrollments/{id}
+        get-by-user-course: ${config.api.prefix.internal}/${config.api.version}/users/{userId}/courses/{courseId}/enrollment
+      learning-progress:
+        get-course-progress: ${config.api.prefix.internal}/${config.api.version}/enrollments/{id}/progress
+      certificate:
+        issue-certificate: ${config.api.prefix.internal}/${config.api.version}/certificates/issue
+  minio:
+    url: http://localhost:9000
+    access-key: minioadmin
+    secret-key: minioadmin
+    bucket: lms-mini

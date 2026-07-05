@@ -1,0 +1,100 @@
+# =========================
+# Common
+# =========================
+common:
+  success: "Success"
+  failed: "Failed"
+  unauthorized: "You are not authorized to access this resource"
+  forbidden: "Access denied"
+  invalid_request: "Invalid request"
+  internal_error: "System error, please try again later"
+  already_exists: "Data already exists"
+  not_found: "Data not found"
+  invalid_input: "Please check the input information"
+  max_file_size_exceed: "Maximum file size: 5MB"
+
+# =========================
+# Validation
+# =========================
+validation:
+  required_field: "The field {0} is required"
+  invalid_format: "The format of {0} is invalid"
+  min_length: "{0} must have at least {1} characters"
+  max_length: "{0} must not exceed {1} characters"
+  email_invalid: "Invalid email address"
+  phone_invalid: "Invalid phone number"
+
+# =========================
+# User Management
+# =========================
+user:
+  not_found: "User not found"
+  already_exists: "User already exists"
+  created: "User created successfully"
+  updated: "User updated successfully"
+  deleted: "User deleted successfully"
+  login_failed: "Incorrect username or password"
+  locked: "Account has been locked"
+
+# =========================
+# Role & Permission
+# =========================
+role:
+  not_found: "Role not found"
+  already_exists: "Role already exists"
+  assigned_success: "Role assigned successfully"
+  removed_success: "Role removed successfully"
+
+permission:
+  not_found: "Permission not found"
+  no_access: "You do not have permission to perform this action"
+  assigned_success: "Permission assigned successfully"
+  removed_success: "Permission removed successfully"
+
+# =========================
+# Product / Service
+# =========================
+product:
+  not_found: "Product/Service not found"
+  already_exists: "Product/Service already exists"
+  created: "Product/Service created successfully"
+  updated: "Product/Service updated successfully"
+  deleted: "Product/Service deleted successfully"
+
+# =========================
+# Order / Transaction
+# =========================
+order:
+  not_found: "Order not found"
+  created: "Order created successfully"
+  updated: "Order updated successfully"
+  canceled: "Order canceled successfully"
+  payment_failed: "Payment failed"
+  payment_success: "Payment successful"
+
+# =========================
+# Security & Auth
+# =========================
+security:
+  invalid_token: "Invalid or expired token"
+  expired_token: "Session has expired"
+  access_denied: "You do not have permission to access this resource"
+  session_timeout: "Session has timed out, please log in again"
+
+# =========================
+# System & Integration
+# =========================
+system:
+  service_unavailable: "Service is temporarily unavailable"
+  integration_error: "Error connecting to an external system"
+  timeout: "System response timed out"
+
+# =========================
+# Import Excel
+# =========================
+import_excel:
+  required_field: " is required"
+  incorrect_format: " has an incorrect format"
+  must_greater: " must be >= "
+  must_less: " must be <= "
+  character: " characters"

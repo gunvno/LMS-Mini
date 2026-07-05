@@ -1,0 +1,8 @@
+course:
+  not_found: "Không tìm thấy khóa học"
+  invalid_submit_review_status: "Chỉ khóa học ở trạng thái DRAFT hoặc REJECTED mới được gửi duyệt"
+  invalid_approve_course_status: "Chỉ khóa học ở trạng thái PENDING_REVIEW mới được duyệt"
+  invalid_archive_course_status: "Chỉ khóa học ở trạng thái PUBLISH mới được lưu trữ"
+image:
+  file_required: "Vui lòng chọn file ảnh"
+  invalid_content_type: "File upload phải là ảnh"

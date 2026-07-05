@@ -1,0 +1,3 @@
+learning:
+  not_found: "Learning data not found"
+  invalid_status: "Invalid learning status"

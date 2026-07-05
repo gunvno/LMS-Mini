@@ -1,0 +1,78 @@
+server:
+  port: 8086
+  shutdown: graceful
+  http2:
+    enabled: true
+
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+spring:
+  application:
+    name: lms-notice-service
+  config:
+    import: optional:classpath:application-base.yaml
+  datasource:
+    driverClassName: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/lms_notice_service?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
+    username: root
+    password: root
+    hikari:
+      schema: lms_notice_service
+  cloud:
+    consul:
+      host: localhost
+      port: 8500
+      config:
+        enabled: false
+      discovery:
+        enabled: true
+        instance-id: ${spring.application.name}-${server.port}
+        service-name: ${spring.application.name}
+        health-check-path: /actuator/health
+        prefer-ip-address: true
+        health-check-interval: 15s
+        register: true
+        deregister: true
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    open-in-view: false
+
+config:
+  service-name: lms-notice-service
+  api:
+    prefix:
+      public: api
+      internal: internal
+      admin: admin
+    version: v1
+    public:
+      device:
+        register: ${config.api.prefix.public}/${config.api.version}/devices/register
+        deactivate: ${config.api.prefix.public}/${config.api.version}/devices/deactivate
+      notice:
+        my-notices: ${config.api.prefix.public}/${config.api.version}/notices/me
+        unread-count: ${config.api.prefix.public}/${config.api.version}/notices/me/unread-count
+        mark-read: ${config.api.prefix.public}/${config.api.version}/notices/{id}/read
+        mark-all-read: ${config.api.prefix.public}/${config.api.version}/notices/read-all
+    internal:
+      notice:
+        send-user: ${config.api.prefix.internal}/${config.api.version}/notices/send-user
+        send-users: ${config.api.prefix.internal}/${config.api.version}/notices/send-users
+        send-role: ${config.api.prefix.internal}/${config.api.version}/notices/send-role
+        send-all: ${config.api.prefix.internal}/${config.api.version}/notices/send-all
+      device:
+        get-active-devices: ${config.api.prefix.internal}/${config.api.version}/devices/users/{userId}/active
+  minio:
+    url: http://localhost:9000
+    access-key: minioadmin
+    secret-key: minioadmin
+    bucket: lms-mini

@@ -1,0 +1,4 @@
+AUTHN_993: "Tài khoản của Quý khách tạm thời bị khóa. Vui lòng đăng nhập lại sau {0}"
+AUTHN_994: "Thông tin đăng nhập không chính xác. Quý khách vui lòng nhập lại."
+AUTHN_995: "Tài khoản của Quý khách tạm thời bị khóa trong thời gian {0} phút do nhập sai quá {1} lần."
+AUTHN_998: "LOGIN_METHOD_INVALID"

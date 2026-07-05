@@ -1,0 +1,6 @@
+course:
+  not_found: "ບໍ່ພົບຫຼັກສູດ"
+  invalid_submit_review_status: "ສົ່ງກວດສອບໄດ້ສະເພາະຫຼັກສູດທີ່ຢູ່ໃນສະຖານະ DRAFT ຫຼື REJECTED"
+image:
+  file_required: "ກະລຸນາເລືອກໄຟລ໌ຮູບພາບ"
+  invalid_content_type: "ໄຟລ໌ທີ່ອັບໂຫຼດຕ້ອງເປັນຮູບພາບ"

@@ -1,0 +1,125 @@
+server:
+  port: 8080
+  shutdown: graceful
+  http2:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: info,health,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+
+config:
+  service-name: lms-api-gateway-service
+  api:
+    authn: localhost:8081
+    author: localhost:8082
+    course: localhost:8083
+    learning: localhost:8084
+    quiz: localhost:8085
+    notice: localhost:8086
+
+spring:
+  application:
+    name: ${config.service-name}
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  cloud:
+    consul:
+      host: localhost
+      port: 8500
+      config:
+        enabled: false
+      discovery:
+        enabled: true
+        instance-id: ${spring.application.name}-${server.port}
+        service-name: ${spring.application.name}
+        health-check-path: /actuator/health
+        prefer-ip-address: true
+        health-check-interval: 15s
+        register: true
+        deregister: true
+    gateway:
+      server:
+        webflux:
+          default-filters:
+            - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin RETAIN_UNIQUE
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowed-origins: "*"
+                allowed-methods: "*"
+                allowed-headers: "*"
+                allow-credentials: false
+          discovery:
+            locator:
+              enabled: true
+              lower-case-service-id: true
+          routes:
+            - id: lms-authn-service
+              uri: lb://lms-authn-service
+              predicates:
+                - Path=/authn/**
+              filters:
+                - RewritePath=/authn/(?<path>.*), /${path}
+            - id: lms-author-service
+              uri: lb://lms-author-service
+              predicates:
+                - Path=/author/**
+              filters:
+                - RewritePath=/author/(?<path>.*), /${path}
+            - id: lms-course-service
+              uri: lb://lms-course-service
+              predicates:
+                - Path=/course/**
+              filters:
+                - RewritePath=/course/(?<path>.*), /${path}
+            - id: lms-learning-service
+              uri: lb://lms-learning-service
+              predicates:
+                - Path=/learning/**
+              filters:
+                - RewritePath=/learning/(?<path>.*), /${path}
+            - id: lms-quiz-service
+              uri: lb://lms-quiz-service
+              predicates:
+                - Path=/quiz/**
+              filters:
+                - RewritePath=/quiz/(?<path>.*), /${path}
+            - id: lms-notice-service
+              uri: lb://lms-notice-service
+              predicates:
+                - Path=/notice/**
+              filters:
+                - RewritePath=/notice/(?<path>.*), /${path}
+  main:
+    allow-bean-definition-overriding: true
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  show-actuator: false
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    urls-primary-name: lms-api-gateway-service
+    urls:
+      - name: lms-api-gateway-service
+        url: /v3/api-docs
+      - name: lms-authn-service
+        url: /authn/v3/api-docs
+      - name: lms-author-service
+        url: /author/v3/api-docs
+      - name: lms-course-service
+        url: /course/v3/api-docs
+      - name: lms-learning-service
+        url: /learning/v3/api-docs
+      - name: lms-quiz-service
+        url: /quiz/v3/api-docs
+      - name: lms-notice-service
+        url: /notice/v3/api-docs

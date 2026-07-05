@@ -1,0 +1,82 @@
+server:
+  port: 8081
+  shutdown: graceful
+  http2:
+    enabled: true
+
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+spring:
+  application:
+    name: lms-authn-service
+  config:
+    import: optional:classpath:application-base.yaml
+  datasource:
+    driverClassName: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/lms_authn_service?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
+    username: root
+    password: root
+    hikari:
+      schema: lms_authn_service
+  cloud:
+    consul:
+      host: localhost
+      port: 8500
+      config:
+        enabled: false
+      discovery:
+        enabled: true
+        instance-id: ${spring.application.name}-${server.port}
+        service-name: ${spring.application.name}
+        health-check-path: /actuator/health
+        prefer-ip-address: true
+        health-check-interval: 15s
+        register: true
+        deregister: true
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    open-in-view: false
+
+config:
+  service-name: lms-authn-service
+  api:
+    prefix:
+      public: api
+      internal: internal
+      admin: admin
+    version: v1
+    authn: localhost:8081
+    author: localhost:8082
+    course: localhost:8083
+    learning: localhost:8084
+    quiz: localhost:8085
+    notice: localhost:8086
+    public:
+      auth:
+        register: ${config.api.prefix.public}/${config.api.version}/auth/register
+        login: ${config.api.prefix.public}/${config.api.version}/auth/login
+        refresh-token: ${config.api.prefix.public}/${config.api.version}/auth/refresh-token
+        logout: ${config.api.prefix.public}/${config.api.version}/auth/logout
+        logout-all: ${config.api.prefix.public}/${config.api.version}/auth/logout-all
+        change-password: ${config.api.prefix.public}/${config.api.version}/auth/change-password
+        me: ${config.api.prefix.public}/${config.api.version}/auth/me
+        update-language: ${config.api.prefix.public}/${config.api.version}/auth/me/language
+    admin:
+      user:
+        create-user: ${config.api.prefix.admin}/${config.api.version}/auth/users
+        lock-user: ${config.api.prefix.admin}/${config.api.version}/auth/users/{id}/lock
+        unlock-user: ${config.api.prefix.admin}/${config.api.version}/auth/users/{id}/unlock
+    internal:
+      verify:
+        validate-token: ${config.api.prefix.internal}/${config.api.version}/verify/validate-token
+        user-info: ${config.api.prefix.internal}/${config.api.version}/verify/user-info
+        signature: ${config.api.prefix.internal}/${config.api.version}/verify/signature

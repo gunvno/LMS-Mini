@@ -1,0 +1,131 @@
+server:
+  shutdown: graceful
+  http2:
+    enabled: true
+
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+spring:
+  application:
+    name: ${config.service-name}
+  security:
+    auth:
+      bcrypt:
+        strength: 12
+    pepper: "EVAT2026"
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  cloud:
+    consul:
+      enabled: true
+      discovery:
+        instance-id: ${config.service-name}
+        service-name: ${config.service-name}
+        enabled: true
+        prefer-ip-address: true
+        prefer-agent-address: false
+        health-check-interval: 15s
+        health-check-timeout: 10s
+        health-check-critical-timeout: 90s
+        register: true
+        deregister: true
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 30000
+      pool-name: "HikariCP"
+      keepalive-time: 30000
+      max-lifetime: 600000
+      connection-timeout: 30000
+      leak-detection-threshold: 20000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 500
+          batch_versioned_data: true
+          time_zone: Asia/Ho_Chi_Minh
+        order_inserts: true
+        order_updates: true
+        format_sql: true
+    generate-ddl: false
+    show-sql: false
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+  show-actuator: false
+  paths-to-match: /**
+
+config:
+  api:
+    prefix:
+      public: api
+      internal: internal
+      admin: admin
+    version: v1
+    internal:
+      location:
+        get-location-info: ${config.api.prefix.internal}/${config.api.version}/get-location-info
+        update-location-info: ${config.api.prefix.internal}/${config.api.version}/update-location-info
+        update-location-info-by-id: ${config.api.prefix.internal}/${config.api.version}/update-location-info-by-id
+        get-province-code: ${config.api.prefix.internal}/${config.api.version}/get-province-code
+      point:
+        get-all-point-history: ${config.api.prefix.internal}/${config.api.version}/get-all-point-history
+        get-all-point-history-by-date: ${config.api.prefix.internal}/${config.api.version}/get-all-point-history-by-date
+        get-all-point-history-by-range-date: ${config.api.prefix.internal}/${config.api.version}/get-all-point-history-by-range-date
+        get-user-point: ${config.api.prefix.internal}/${config.api.version}/get-user-point
+        save-point-history: ${config.api.prefix.internal}/${config.api.version}/save-point-history
+        check-voucher-apply: ${config.api.prefix.internal}/${config.api.version}/check-voucher-apply
+        get-used-voucher-ids: ${config.api.prefix.internal}/${config.api.version}/get-used-voucher-ids
+        save-point-reward: ${config.api.prefix.internal}/${config.api.version}/save-point-reward
+        save-point-reward-history: ${config.api.prefix.internal}/${config.api.version}/save-point-reward-history
+        insert-point-reward-history: ${config.api.prefix.internal}/${config.api.version}/insert-point-reward-history
+        update-point-reward-history: ${config.api.prefix.internal}/${config.api.version}/update-point-reward-history
+        get-total-reward: ${config.api.prefix.internal}/${config.api.version}/get-total-reward
+      config-service:
+        get-promotion: ${config.api.prefix.internal}/${config.api.version}/get-promotion
+        get-user-promotion: ${config.api.prefix.internal}/${config.api.version}/get-user-promotion
+        get-users-promotion: ${config.api.prefix.internal}/${config.api.version}/get-users-promotion
+        get-station-promotion: ${config.api.prefix.internal}/${config.api.version}/get-station-promotion
+        update-promotion-used-count: ${config.api.prefix.internal}/${config.api.version}/update-promotion-used-count
+        get-user-deposit-promotion: ${config.api.prefix.internal}/${config.api.version}/get-user-deposit-promotion
+        save-promotion-usage: ${config.api.prefix.internal}/${config.api.version}/save-promotion-usage
+  otp:
+    secret-key: 2~wsL|b4*F50
+  mail:
+    host: mail.atomi.com.vn
+    port: 465
+    username: ev-atomi@atomi.com.vn
+    password: Atm@87654321
+  file:
+    template-path: templates/
+    storage-path: templates/
+  minio:
+    url: http://10.38.61.144:9000
+    access-key: NyYeIpDJbDzaoNhCrDd4
+    secret-key: YOJuLq3JWEvPaAquho0FCUSw3iMD5bm6nC84vCA9
+    bucket: evcharge
+  service:
+    location:
+      url: localhost:8087
