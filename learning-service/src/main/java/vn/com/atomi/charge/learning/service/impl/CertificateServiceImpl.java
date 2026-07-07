@@ -41,7 +41,7 @@ implements CertificateService {
         response = new BaseResponse<>();
         if(certificateCode.isEmpty())
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("certificat.not_found"));
-        Optional<CertificateEntity> optionalCertificate = repository.findByCodeAndDeletedAtIsNull(certificateCode);
+        Optional<CertificateEntity> optionalCertificate = repository.findByCertificateCodeAndDeletedAtIsNull(certificateCode);
         if(optionalCertificate.isEmpty())
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("certificate.not_found"));
         CertificateEntity entity = optionalCertificate.get();

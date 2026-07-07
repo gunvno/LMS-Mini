@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import vn.com.atomi.charge.base.controller.BaseController;
 import vn.com.atomi.charge.base.model.request.BaseRequest;
 import vn.com.atomi.charge.quiz.model.dto.QuizAttemptDto;
 import vn.com.atomi.charge.quiz.service.interfaces.QuizAttemptService;
@@ -17,7 +16,14 @@ import vn.com.atomi.charge.quiz.service.interfaces.QuizAttemptService;
 @RestController
 @RequestMapping("/api/v1")
 @PreAuthorize("hasAuthority('QUIZ_ATTEMPT')")
-public class QuizAttemptController extends BaseController<QuizAttemptService, QuizAttemptDto> {
+public class QuizAttemptController {
+
+    private final QuizAttemptService service;
+
+    public QuizAttemptController(QuizAttemptService service) {
+        this.service = service;
+    }
+
     @PostMapping("/quizzes/{id}/attempts")
     @PreAuthorize("hasAuthority('QUIZ_ATTEMPT')")
     public ResponseEntity<?> startQuiz(@PathVariable String id){

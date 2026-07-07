@@ -1,7 +1,5 @@
 server:
   port: 8085
-  servlet:
-    context-path: /api/v1
   shutdown: graceful
   http2:
     enabled: true

@@ -59,7 +59,12 @@ spring:
         smtp:
           auth: true
           starttls:
-            enable: true
+          enable: true
+
+jwt:
+  signerKey: 3cfa76ef14937c1c0ea519f8fc057a80fcd04a7420f8e8bcd0a7567c272e007b
+  valid-duration: 86400
+  refreshable-duration: 604800
 
 config:
   service-name: lms-authn-service

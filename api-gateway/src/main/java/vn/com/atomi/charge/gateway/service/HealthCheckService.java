@@ -30,7 +30,10 @@ public class HealthCheckService {
 
       apiConfig.getApi().forEach((name, host) -> {
         try {
-          String healthUrl = "http://" + host + "/actuator/health";
+          String baseUrl = host.startsWith("http://") || host.startsWith("https://")
+              ? host
+              : "http://" + host;
+          String healthUrl = baseUrl + "/actuator/health";
           Map healthResponse = restTemplate.getForObject(healthUrl, Map.class);
 
           String status = (String) healthResponse.get("status");

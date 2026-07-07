@@ -7,7 +7,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import vn.com.atomi.charge.base.controller.BaseController;
 import vn.com.atomi.charge.base.model.dto.BaseDto;
 import vn.com.atomi.charge.base.model.request.BaseRequest;
 import vn.com.atomi.charge.learning.model.dto.EnrollmentDto;
@@ -17,7 +16,13 @@ import vn.com.atomi.charge.learning.service.interfaces.EnrollmentService;
 @RequestMapping("/api/v1")
 @Tag(name = "Enrollments", description = "APIs for course enrollment")
 @PreAuthorize("hasAuthority('ENROLLMENT_VIEW')")
-public class EnrollmentController extends BaseController<EnrollmentService, EnrollmentDto> {
+public class EnrollmentController {
+
+    private final EnrollmentService service;
+
+    public EnrollmentController(EnrollmentService service) {
+        this.service = service;
+    }
 
     @PostMapping("/courses/{courseId}/enroll")
     @PreAuthorize("hasAuthority('ENROLLMENT_ENROLL')")
@@ -33,7 +38,7 @@ public class EnrollmentController extends BaseController<EnrollmentService, Enro
     }
     @PostMapping("/enrollments/{id}/complete")
     @PreAuthorize("hasAuthority('LEARNING_PROGRESS_UPDATE')")
-    public ResponseEntity<?> finishCourse(String id){
+    public ResponseEntity<?> finishCourse(@PathVariable String id){
         return ResponseEntity.ok(service.finishCourse(id));
     }
 }
