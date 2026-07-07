@@ -193,4 +193,20 @@ public class EnrollmentServiceImpl extends BaseService<EnrollmentRepository,
 
         return certificateCode;
     }
+
+    @Override
+    public BaseResponse<EnrollmentDto> findEnrollmentByCourseIdAndUserId(String courseId){
+        response = new BaseResponse<>();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userId = authentication.getName();
+        if(courseId.isEmpty())
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("course.not_found"));
+        Optional<EnrollmentEntity> optionalEnrollment = repository.findByUserIdAndCourseIdAndDeletedAtIsNull(userId,courseId);
+        if(optionalEnrollment.isEmpty())
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("course.not_found"));
+        EnrollmentEntity enrollment = optionalEnrollment.get();
+        response.setData(mapper.toDto(enrollment));
+        response.setStatus(HttpStatus.OK);
+        return response;
+    }
 }

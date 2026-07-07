@@ -11,7 +11,7 @@ import vn.com.atomi.charge.quiz.model.dto.QuestionDto;
 import vn.com.atomi.charge.quiz.service.interfaces.QuestionService;
 
 @RestController
-@RequestMapping("/questions")
+@RequestMapping("/api/v1/questions")
 @Tag(name = "Question", description = "CRUD APIs for question")
 public class QuestionController extends BaseController<QuestionService,QuestionDto> {
     @PostMapping("/quizzes/{id}")

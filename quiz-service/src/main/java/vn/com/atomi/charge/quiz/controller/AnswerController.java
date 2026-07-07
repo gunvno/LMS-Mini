@@ -16,7 +16,7 @@ import vn.com.atomi.charge.quiz.model.dto.AnswerDto;
 import vn.com.atomi.charge.quiz.service.impl.AnswerServiceImpl;
 
 @RestController
-@RequestMapping("/answers")
+@RequestMapping("/api/v1/answers")
 @Tag(name = "Answer", description = "CRUD APIs for answer")
 public class AnswerController extends BaseController<AnswerServiceImpl, AnswerDto> {
 

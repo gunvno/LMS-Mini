@@ -8,7 +8,7 @@ import vn.com.atomi.charge.quiz.model.dto.QuizDto;
 import vn.com.atomi.charge.quiz.service.interfaces.QuizService;
 
 @RestController
-@RequestMapping("/quiz")
+@RequestMapping("/api/v1/quiz")
 @Tag(name = "Quiz", description = "CRUD APIs for quiz")
 public class QuizController extends BaseController<QuizService, QuizDto> {
 }

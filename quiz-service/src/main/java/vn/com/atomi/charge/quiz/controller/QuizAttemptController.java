@@ -1,0 +1,20 @@
+package vn.com.atomi.charge.quiz.controller;
+
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import vn.com.atomi.charge.base.controller.BaseController;
+import vn.com.atomi.charge.quiz.model.dto.QuizAttemptDto;
+import vn.com.atomi.charge.quiz.service.interfaces.QuizAttemptService;
+
+@RestController
+@RequestMapping("/api/v1")
+public class QuizAttemptController extends BaseController<QuizAttemptService, QuizAttemptDto> {
+    @PostMapping("/quizzes/{id}/attempts")
+    public ResponseEntity<?> startQuiz(@PathVariable String id){
+        return ResponseEntity.ok(service.startQuiz(id));
+    }
+}
