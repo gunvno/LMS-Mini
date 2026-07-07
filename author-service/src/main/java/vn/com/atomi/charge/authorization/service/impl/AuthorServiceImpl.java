@@ -15,7 +15,6 @@ import vn.com.atomi.charge.authorization.model.dto.StaffAccountDto;
 import vn.com.atomi.charge.authorization.model.entity.PermissionEntity;
 import vn.com.atomi.charge.authorization.model.entity.RoleEntity;
 import vn.com.atomi.charge.authorization.model.entity.RolePermissionEntity;
-import vn.com.atomi.charge.authorization.model.entity.UserPermissionEntity;
 import vn.com.atomi.charge.authorization.model.entity.UserRoleEntity;
 import vn.com.atomi.charge.authorization.model.enums.RoleCode;
 import vn.com.atomi.charge.authorization.model.request.RolePermissionRequest;
@@ -27,7 +26,6 @@ import vn.com.atomi.charge.authorization.model.request.UserRoleRequest;
 import vn.com.atomi.charge.authorization.repository.AuthorRepo;
 import vn.com.atomi.charge.authorization.repository.PermissionRepo;
 import vn.com.atomi.charge.authorization.repository.RolePermissionRepo;
-import vn.com.atomi.charge.authorization.repository.UserPermissionRepository;
 import vn.com.atomi.charge.authorization.repository.UserRoleRepository;
 import vn.com.atomi.charge.authorization.service.interfaces.AuthorService;
 import vn.com.atomi.charge.base.model.request.BaseRequest;
@@ -44,20 +42,17 @@ public class AuthorServiceImpl implements AuthorService {
 	private final PermissionRepo permissionRepository;
 	private final RolePermissionRepo rolePermissionRepository;
 	private final UserRoleRepository userRoleRepository;
-	private final UserPermissionRepository userPermissionRepository;
 	private final AuthnClient authnClient;
 
 	public AuthorServiceImpl(AuthorRepo roleRepository,
 							 PermissionRepo permissionRepository,
 							 RolePermissionRepo rolePermissionRepository,
 							 UserRoleRepository userRoleRepository,
-							 UserPermissionRepository userPermissionRepository,
 							 AuthnClient authnClient) {
 		this.roleRepository = roleRepository;
 		this.permissionRepository = permissionRepository;
 		this.rolePermissionRepository = rolePermissionRepository;
 		this.userRoleRepository = userRoleRepository;
-		this.userPermissionRepository = userPermissionRepository;
 		this.authnClient = authnClient;
 	}
 
@@ -206,9 +201,10 @@ public class AuthorServiceImpl implements AuthorService {
 				? request.getData().getPermissionCodes()
 				: List.of();
 
-		List<UserPermissionEntity> existing = userPermissionRepository.findByUserIdAndDeletedAtIsNull(accountId);
+		RoleEntity instructorRole = findRole(RoleCode.INSTRUCTOR.name());
+		List<RolePermissionEntity> existing = rolePermissionRepository.findByRoleIdAndDeletedAtIsNull(instructorRole.getId());
 		if (!existing.isEmpty()) {
-			userPermissionRepository.softDelete(existing.stream().map(UserPermissionEntity::getId).toList(), LocalDateTime.now(), LocalDateTime.now());
+			rolePermissionRepository.softDelete(existing.stream().map(RolePermissionEntity::getId).toList(), LocalDateTime.now(), LocalDateTime.now());
 		}
 
 		for (String permissionCode : permissionCodes) {
@@ -216,12 +212,12 @@ public class AuthorServiceImpl implements AuthorService {
 				continue;
 			}
 			PermissionEntity permission = findPermission(permissionCode);
-			UserPermissionEntity mapping = new UserPermissionEntity();
-			mapping.setUserId(accountId);
+			RolePermissionEntity mapping = new RolePermissionEntity();
+			mapping.setRoleId(instructorRole.getId());
 			mapping.setPermissionId(permission.getId());
 			mapping.setCreatedBy("system");
 			mapping.setLastModifiedBy("system");
-			userPermissionRepository.save(mapping);
+			rolePermissionRepository.save(mapping);
 		}
 
 		return getStaffAccount(accountId);
@@ -376,29 +372,13 @@ public class AuthorServiceImpl implements AuthorService {
 	}
 
 	private List<String> getEffectivePermissionCodes(String userId) {
-		List<String> rolePermissions = userRoleRepository.findByUserIdAndDeletedAtIsNull(userId).stream()
+		return userRoleRepository.findByUserIdAndDeletedAtIsNull(userId).stream()
 				.map(UserRoleEntity::getRoleId)
 				.flatMap(roleId -> rolePermissionRepository.findByRoleIdAndDeletedAtIsNull(roleId).stream())
 				.map(RolePermissionEntity::getPermissionId)
 				.map(permissionId -> permissionRepository.findEntityById(permissionId).orElse(null))
 				.filter(item -> item != null)
 				.map(PermissionEntity::getCode)
-				.toList();
-
-		List<String> userPermissions = userPermissionRepository.findByUserIdAndDeletedAtIsNull(userId).stream()
-				.map(UserPermissionEntity::getPermissionId)
-				.map(permissionId -> permissionRepository.findEntityById(permissionId).orElse(null))
-				.filter(item -> item != null)
-				.map(PermissionEntity::getCode)
-				.toList();
-
-		if (!userPermissions.isEmpty()) {
-			return userPermissions.stream()
-					.distinct()
-					.toList();
-		}
-
-		return rolePermissions.stream()
 				.distinct()
 				.toList();
 	}
