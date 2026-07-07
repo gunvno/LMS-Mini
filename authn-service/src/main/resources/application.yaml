@@ -45,6 +45,21 @@ spring:
       ddl-auto: none
     show-sql: false
     open-in-view: false
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: longta2004.vtv3@gmail.com
+    password: irnyjvkkgsnmcfyk
+    smtp:
+      auth: true
+      starttls-enable: true
+      ssl-enable: false
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 config:
   service-name: lms-authn-service
@@ -73,3 +88,8 @@ config:
         validate-token: ${config.api.prefix.internal}/${config.api.version}/verify/validate-token
         user-info: ${config.api.prefix.internal}/${config.api.version}/verify/user-info
         signature: ${config.api.prefix.internal}/${config.api.version}/verify/signature
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: longta2004.vtv3@gmail.com
+    password: irnyjvkkgsnmcfyk

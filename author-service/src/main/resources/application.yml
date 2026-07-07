@@ -34,6 +34,6 @@ spring:
     open-in-view: false
 
 config:
-  service-name: ev-authorization-service
+  service-name: lms-author-service
   api:
     version: v1

@@ -42,9 +42,20 @@ spring:
     redis:
       host: 192.168.100.223
       port: 6379
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: longta2004.vtv3@gmail.com
+    password: irnyjvkkgsnmcfyk
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 config:
-  service-name: ev-authentication-service
+  service-name: lms-authn-service
   api:
     version: v1
     whiteList:
@@ -102,6 +113,15 @@ config:
     #todo change when need
     max-fail-count: 5
     lock-time (m): 30
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: longta2004.vtv3@gmail.com
+    password: irnyjvkkgsnmcfyk
+    smtp:
+      auth: true
+      starttls-enable: true
+      ssl-enable: false
   login:
     failed_login_limit: 5
     lock_for_first_time(m): 5

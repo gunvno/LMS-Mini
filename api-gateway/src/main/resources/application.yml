@@ -20,9 +20,10 @@ management:
       show-details: ALWAYS
 
 config:
-  service-name: ev-api-gateway-service
+  service-name: lms-api-gateway-service
   api:
-    authn: localhost
+    authn: http://localhost:8081
+    author: http://localhost:8082
 
 spring:
   profiles:
@@ -65,14 +66,39 @@ spring:
               enabled: true
               lower-case-service-id: true
           routes:
-            - id: ev-authentication-service
-              uri: lb://ev-authentication-service
+            - id: lms-authn-continental-auth
+              uri: lb://lms-authn-service
+              predicates:
+                - Path=/auth/**
+              filters:
+                - RewritePath=/auth/token, /api/v1/auth/login
+                - RewritePath=/auth/refresh, /api/v1/auth/refresh-token
+                - RewritePath=/auth/userinfo, /api/v1/auth/me
+                - RewritePath=/auth/(?<path>.*), /api/v1/auth/$\{path}
+            - id: lms-authn-continental-users
+              uri: lb://lms-authn-service
+              predicates:
+                - Path=/users/**
+              filters:
+                - RewritePath=/users/(?<userId>.*)/summary, /internal/v1/AuthnUser/$\{userId}/info
+            - id: lms-author-continental-permissions
+              uri: lb://lms-author-service
+              predicates:
+                - Path=/admin/permissions,/admin/permissions/**
+              filters:
+                - RewritePath=/admin/permissions(?<path>/?.*), /api/v1/permissions$\{path}
+            - id: lms-author-continental-staff-activity
+              uri: lb://lms-author-service
+              predicates:
+                - Path=/staff-activity/**
+            - id: lms-authn-service
+              uri: lb://lms-authn-service
               predicates:
                 - Path=/authn/**
               filters:
                 - RewritePath=/authn/(?<path>.*), /$\{path}
-            - id: ev-authorization-service
-              uri: lb://ev-authorization-service
+            - id: lms-author-service
+              uri: lb://lms-author-service
               predicates:
                 - Path=/author/**
               filters:
@@ -91,7 +117,11 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
     enabled: true
-    urls-primary-name: "ev-api-gateway-service"
+    urls-primary-name: "lms-api-gateway-service"
     urls:
-      - name: ev-api-gateway-service
+      - name: lms-api-gateway-service
         url: /v3/api-docs
+      - name: lms-authn-service
+        url: /authn/v3/api-docs
+      - name: lms-author-service
+        url: /author/v3/api-docs

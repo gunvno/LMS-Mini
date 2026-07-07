@@ -1,10 +1,10 @@
 services:
   api:
-    container_name: ev-authentication-service
+    container_name: lms-authn-service
     build:
       context: .
       dockerfile: Dockerfile
-    image: atomi.digital.com/ev-services/authentication-service:v1
+    image: lms-mini/authn-service:v1
     restart: always
     ports:
       - 8081:8081

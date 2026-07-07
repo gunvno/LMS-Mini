@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,24 +34,28 @@ public class LessonController {
     }
 
     @GetMapping("/api/v1/lessons")
+    @PreAuthorize("hasAuthority('LESSON_VIEW')")
     public ResponseEntity<?> getAll(@RequestParam Map<String, String> params, Pageable pageable) {
         BaseResponse<Page<LessonDto>> dtos = service.getAll(params, pageable);
         return ResponseEntity.ok(dtos);
     }
 
     @GetMapping("/api/v1/lessons/{id}")
+    @PreAuthorize("hasAuthority('LESSON_VIEW')")
     public ResponseEntity<?> getDetails(@PathVariable("id") String id) {
         BaseResponse<LessonDto> dto = service.getDetails(id);
         return ResponseEntity.ok(dto);
     }
 
     @PostMapping("/api/v1/lessons")
+    @PreAuthorize("hasAuthority('LESSON_MANAGE')")
     @Validated(BaseDto.Create.class)
     public ResponseEntity<?> create(@RequestBody @Valid BaseRequest<LessonDto> dto) {
         return ResponseEntity.ok(service.create(dto));
     }
 
     @PostMapping("/api/v1/lessons/{id}")
+    @PreAuthorize("hasAuthority('LESSON_MANAGE')")
     @Validated(BaseDto.Update.class)
     public ResponseEntity<?> update(@RequestBody @Valid BaseRequest<LessonDto> dto,
                                     @PathVariable String id) {
@@ -59,21 +64,25 @@ public class LessonController {
     }
 
     @DeleteMapping("/api/v1/lessons/{id}")
+    @PreAuthorize("hasAuthority('LESSON_MANAGE')")
     public ResponseEntity<?> delete(@PathVariable String id) {
         return ResponseEntity.ok(service.delete(id));
     }
 
     @DeleteMapping("/api/v1/lessons")
+    @PreAuthorize("hasAuthority('LESSON_MANAGE')")
     public ResponseEntity<?> deleteMany(@RequestBody List<String> ids) {
         return ResponseEntity.ok(service.delete(ids));
     }
 
     @GetMapping("/api/v1/courses/{courseId}/lessons")
+    @PreAuthorize("hasAuthority('LESSON_VIEW')")
     public ResponseEntity<?> getLessonsByCourse(@PathVariable String courseId, Pageable pageable) {
         return ResponseEntity.ok(service.getLessonByCourseId(courseId, pageable));
     }
 
     @PostMapping("/api/v1/courses/{courseId}/lessons")
+    @PreAuthorize("hasAuthority('LESSON_MANAGE')")
     @Validated(BaseDto.Create.class)
     public ResponseEntity<?> createLessonByCourse(@PathVariable String courseId,
                                                   @RequestBody @Valid BaseRequest<LessonDto> request) {

@@ -4,10 +4,17 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
 import vn.com.atomi.charge.authn.model.dto.AuthnUserDto;
+import vn.com.atomi.charge.authn.model.request.InternalCreateUserRequest;
+import vn.com.atomi.charge.authn.model.request.InternalResetPasswordRequest;
+import vn.com.atomi.charge.authn.model.request.InternalUpdateUserStatusRequest;
 import vn.com.atomi.charge.authn.service.interfaces.AuthnUserService;
 import vn.com.atomi.charge.base.model.response.BaseResponse;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/internal/v1/AuthnUser")
@@ -27,5 +34,27 @@ public class InternalAuthnUserController {
     @GetMapping("/{userId}/info")
     public BaseResponse<AuthnUserDto> getUserById(@PathVariable String userId) {
         return authnUserService.getUserById(userId);
+    }
+
+    @PostMapping("/bulk")
+    public BaseResponse<List<AuthnUserDto>> getUsersByIds(@RequestBody List<String> userIds) {
+        return authnUserService.getUsersByIds(userIds);
+    }
+
+    @PostMapping("/staff")
+    public BaseResponse<AuthnUserDto> createStaffUser(@RequestBody @Valid InternalCreateUserRequest request) {
+        return authnUserService.createStaffUser(request);
+    }
+
+    @PostMapping("/{userId}/status")
+    public BaseResponse<AuthnUserDto> updateUserStatus(@PathVariable String userId,
+                                                       @RequestBody @Valid InternalUpdateUserStatusRequest request) {
+        return authnUserService.updateUserStatus(userId, request);
+    }
+
+    @PostMapping("/{userId}/reset-password")
+    public BaseResponse<AuthnUserDto> resetPassword(@PathVariable String userId,
+                                                    @RequestBody InternalResetPasswordRequest request) {
+        return authnUserService.resetPassword(userId, request);
     }
 }

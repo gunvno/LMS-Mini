@@ -2,6 +2,7 @@ package vn.com.atomi.charge.authn.controller;
 
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -50,6 +51,7 @@ public class AuthController {
 	}
 
 	@PostMapping("/change-password")
+	@PreAuthorize("hasAuthority('USER_PASSWORD_CHANGE')")
 	public BaseResponse<?> changePassword(@RequestHeader(HttpHeaders.AUTHORIZATION) String token,
 										  @RequestBody @Valid ChangePasswordRequest request) {
 		authnService.changePassword(token, request);

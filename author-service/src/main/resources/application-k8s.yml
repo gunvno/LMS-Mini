@@ -44,7 +44,7 @@ spring:
       port: 6379
 
 config:
-  service-name: ev-authorization-service
+  service-name: lms-author-service
   api:
     version: v1
     whiteList:

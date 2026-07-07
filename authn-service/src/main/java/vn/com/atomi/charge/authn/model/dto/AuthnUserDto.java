@@ -35,4 +35,8 @@ public class AuthnUserDto extends BaseDto<String> {
     private LocalDateTime lastLoginAt;
 
     private LocalDateTime passwordChangeAt;
+
+    private LocalDateTime createdDate;
+
+    private LocalDateTime lastModifiedDate;
 }

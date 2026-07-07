@@ -11,6 +11,7 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.util.StringUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import vn.com.atomi.charge.base.model.enums.CustomHeader;
 
 @Configuration
 @Slf4j
@@ -30,6 +31,17 @@ public class FeignConfig implements RequestInterceptor {
         String authorization = attributes.getRequest().getHeader(HttpHeaders.AUTHORIZATION);
         if (StringUtils.hasText(authorization)) {
             requestTemplate.header(HttpHeaders.AUTHORIZATION, authorization);
+        }
+        forwardHeader(requestTemplate, attributes, CustomHeader.USER_INFO.getHeaderName());
+        forwardHeader(requestTemplate, attributes, CustomHeader.PHONE_NUMBER.getHeaderName());
+        forwardHeader(requestTemplate, attributes, CustomHeader.ROLE_CODE.getHeaderName());
+        forwardHeader(requestTemplate, attributes, CustomHeader.PERMISSIONS.getHeaderName());
+    }
+
+    private void forwardHeader(RequestTemplate requestTemplate, ServletRequestAttributes attributes, String headerName) {
+        String value = attributes.getRequest().getHeader(headerName);
+        if (StringUtils.hasText(value)) {
+            requestTemplate.header(headerName, value);
         }
     }
 }

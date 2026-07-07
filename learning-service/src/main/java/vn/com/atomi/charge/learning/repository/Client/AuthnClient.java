@@ -11,6 +11,6 @@ import vn.com.atomi.charge.learning.model.dto.AuthnUserDto;
 public interface AuthnClient {
     @PostMapping("/internal/v1/AuthnUser/{id}/check")
     Boolean checkUser(@PathVariable String id);
-    @GetMapping("/internal/v1/AuthUser/{userId}/info")
+    @GetMapping("/internal/v1/AuthnUser/{userId}/info")
     BaseResponse<AuthnUserDto> getUserById(@PathVariable String userId);
 }

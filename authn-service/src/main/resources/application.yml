@@ -20,6 +20,17 @@ spring:
       discovery:
         enabled: true
       enabled: true
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: longta2004.vtv3@gmail.com
+    password: irnyjvkkgsnmcfyk
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 config:
   channel:
@@ -75,6 +86,15 @@ config:
     max-fail-count: 5
     lock-time (m): 30
     secret-key: 2~wsL|b4*F50
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: longta2004.vtv3@gmail.com
+    password: irnyjvkkgsnmcfyk
+    smtp:
+      auth: true
+      starttls-enable: true
+      ssl-enable: false
   login:
     failed_login_limit: 5
     lock_for_first_time(m): 5

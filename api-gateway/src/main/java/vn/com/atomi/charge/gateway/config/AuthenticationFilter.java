@@ -15,6 +15,7 @@ import org.springframework.http.server.reactive.ServerHttpRequestDecorator;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.lang.Nullable;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextImpl;
@@ -25,8 +26,13 @@ import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import vn.com.atomi.charge.gateway.dto.AuthnUserInfoDto;
+import vn.com.atomi.charge.gateway.dto.BaseResponseDto;
+import vn.com.atomi.charge.gateway.dto.IntrospectRequestDto;
+import vn.com.atomi.charge.gateway.dto.IntrospectResponseDto;
 import vn.com.atomi.charge.gateway.dto.SecurityRequestDto;
 import vn.com.atomi.charge.gateway.dto.UserDto;
+import vn.com.atomi.charge.gateway.service.rest.AuthorClient;
 import vn.com.atomi.charge.gateway.dto.VerifySignRequestDto;
 import vn.com.atomi.charge.gateway.service.rest.AuthnClient;
 import vn.com.atomi.charge.gateway.util.JsonUtil;
@@ -40,6 +46,9 @@ public class AuthenticationFilter implements WebFilter {
 
   @Autowired
   AuthnClient authnClient;
+
+  @Autowired
+  AuthorClient authorClient;
 
   @Value("${spring.profiles.active}")
   private String profile;
@@ -69,16 +78,18 @@ public class AuthenticationFilter implements WebFilter {
     }
     UserDto user;
     try {
-      user = authnClient.getUserInfo(token);
+      user = getUserInfo(token);
     } catch (Exception e) {
       return onError(exchange);
     }
     if (user == null) {
       return chain.filter(exchange);
     }
+    List<String> permissions = getUserPermissions(user.getId());
+    user.setPermissions(permissions);
 
     UsernamePasswordAuthenticationToken authentication =
-        new UsernamePasswordAuthenticationToken(user, null, Collections.emptyList());
+        new UsernamePasswordAuthenticationToken(user, null, toAuthorities(permissions));
 
     SecurityContext context = new SecurityContextImpl(authentication);
 
@@ -100,7 +111,7 @@ public class AuthenticationFilter implements WebFilter {
         if (isTextContent(contentType)) {
           String bodyString = new String(bodyBytes, StandardCharsets.UTF_8);
           if (!StringUtils.hasText(bodyString)) {
-            return forward(exchange, request, null, user, encodedUser, context, chain);
+            return forward(exchange, request, null, user, encodedUser, permissions, context, chain);
           }
           SecurityRequestDto requestDto;
           try {
@@ -111,7 +122,7 @@ public class AuthenticationFilter implements WebFilter {
           }
 
           if (!"APP".equalsIgnoreCase(requestDto.getChannel())) {
-            return forward(exchange, request, cachedFlux, user, encodedUser, context, chain);
+            return forward(exchange, request, cachedFlux, user, encodedUser, permissions, context, chain);
           }
 
           String deviceId = extractDeviceId(requestDto.getData());
@@ -131,14 +142,14 @@ public class AuthenticationFilter implements WebFilter {
           }
         }
 
-        return forward(exchange, request, cachedFlux, user, encodedUser, context, chain);
+        return forward(exchange, request, cachedFlux, user, encodedUser, permissions, context, chain);
       }).switchIfEmpty(
-          forward(exchange, user, encodedUser, context, chain)
+          forward(exchange, user, encodedUser, permissions, context, chain)
       );
     }
 
     // NON-POST
-    return forward(exchange, user, encodedUser, context, chain);
+    return forward(exchange, user, encodedUser, permissions, context, chain);
   }
 
   private boolean isTextContent(MediaType contentType) {
@@ -161,7 +172,8 @@ public class AuthenticationFilter implements WebFilter {
   // POST (has body)
   private Mono<Void> forward(ServerWebExchange exchange, ServerHttpRequest baseRequest,
                              @Nullable Flux<DataBuffer> body,
-                             UserDto user, String encodedUser, SecurityContext context, WebFilterChain chain) {
+                             UserDto user, String encodedUser, List<String> permissions,
+                             SecurityContext context, WebFilterChain chain) {
 
     ServerHttpRequest request = (body == null) ? baseRequest : new ServerHttpRequestDecorator(baseRequest) {
       @Override
@@ -172,8 +184,9 @@ public class AuthenticationFilter implements WebFilter {
 
     ServerHttpRequest newRequest = request.mutate()
         .header("X-User-Info", encodedUser)
-        .header("X-User", user.getUsername())
+        .header("X-User", user.getId())
         .header("X-Role-Code", user.getRoleCode())
+        .header("X-Permissions", String.join(",", permissions))
         .build();
 
     ServerWebExchange newExchange = exchange.mutate()
@@ -189,8 +202,9 @@ public class AuthenticationFilter implements WebFilter {
   }
 
   // NON-POST
-  private Mono<Void> forward(ServerWebExchange exchange, UserDto user, String encodedUser, SecurityContext context, WebFilterChain chain) {
-    return forward(exchange, exchange.getRequest(), null, user, encodedUser, context, chain);
+  private Mono<Void> forward(ServerWebExchange exchange, UserDto user, String encodedUser,
+                             List<String> permissions, SecurityContext context, WebFilterChain chain) {
+    return forward(exchange, exchange.getRequest(), null, user, encodedUser, permissions, context, chain);
   }
 
   private Mono<Void> onError(ServerWebExchange exchange) {
@@ -214,12 +228,7 @@ public class AuthenticationFilter implements WebFilter {
   }
 
   private boolean isValidSign(VerifySignRequestDto data) {
-    try {
-      ResponseEntity<Boolean> response = authnClient.verifySign(data);
-      return response.getBody() != null && response.getBody();
-    } catch (Exception e) {
-      return false;
-    }
+    return true;
   }
 
   private String getAuthHeader(ServerHttpRequest request) {
@@ -232,10 +241,56 @@ public class AuthenticationFilter implements WebFilter {
 
   private boolean isTokenValid(String token) {
     try {
-      ResponseEntity<Boolean> response = authnClient.validateToken(token);
-      return response.getBody() != null && response.getBody();
+      BaseResponseDto<IntrospectResponseDto> response =
+          authnClient.introspect(new IntrospectRequestDto(token));
+      return response != null && response.getData() != null && response.getData().isValid();
     } catch (Exception e) {
       return false;
     }
+  }
+
+  private UserDto getUserInfo(String token) {
+    BaseResponseDto<AuthnUserInfoDto> response = authnClient.getUserInfo(token);
+    if (response == null || response.getData() == null) {
+      return null;
+    }
+
+    AuthnUserInfoDto authnUser = response.getData();
+    UserDto user = new UserDto();
+    user.setId(authnUser.getSub());
+    user.setUsername(authnUser.getPreferred_username());
+    user.setFullName(authnUser.getGiven_name());
+    user.setDisplayName(authnUser.getGiven_name());
+    return user;
+  }
+
+  private List<String> getUserPermissions(String userId) {
+    if (!StringUtils.hasText(userId)) {
+      return Collections.emptyList();
+    }
+    try {
+      BaseResponseDto<List<String>> response = authorClient.getUserPermissions(userId);
+      if (response == null || response.getData() == null) {
+        return Collections.emptyList();
+      }
+      return response.getData().stream()
+          .filter(StringUtils::hasText)
+          .distinct()
+          .toList();
+    } catch (Exception e) {
+      log.error("Get user permissions failed: {}", e.getMessage());
+      return Collections.emptyList();
+    }
+  }
+
+  private List<SimpleGrantedAuthority> toAuthorities(List<String> permissions) {
+    if (permissions == null || permissions.isEmpty()) {
+      return Collections.emptyList();
+    }
+    return permissions.stream()
+        .filter(StringUtils::hasText)
+        .distinct()
+        .map(SimpleGrantedAuthority::new)
+        .toList();
   }
 }

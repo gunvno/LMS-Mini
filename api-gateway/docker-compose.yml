@@ -1,10 +1,10 @@
 services:
   api:
-    container_name: ev-api-service
+    container_name: lms-api-gateway-service
     build:
       context: .
       dockerfile: Dockerfile
-    image: atomi.digital.com/ev-services/api-gateway:v1
+    image: lms-mini/api-gateway:v1
     restart: always
     ports:
       - 8080:8080

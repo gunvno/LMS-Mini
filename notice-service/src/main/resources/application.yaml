@@ -45,6 +45,21 @@ spring:
       ddl-auto: none
     show-sql: false
     open-in-view: false
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: longta2004.vtv3@gmail.com
+    password: irnyjvkkgsnmcfyk
+    smtp:
+      auth: true
+      starttls-enable: true
+      ssl-enable: false
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 config:
   service-name: lms-notice-service
@@ -76,3 +91,8 @@ config:
     access-key: minioadmin
     secret-key: minioadmin
     bucket: lms-mini
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: longta2004.vtv3@gmail.com
+    password: irnyjvkkgsnmcfyk

@@ -29,21 +29,10 @@ spring:
       port: 8500
 
 config:
-  service-name: ev-api-gateway-service
+  service-name: lms-api-gateway-service
   api:
-    authn: evcharge-authentication-svc.evcharge.svc.cluster.local
-    author: evcharge-authorization-svc.evcharge.svc.cluster.local
-    charge: evcharge-charge-svc.evcharge.svc.cluster.local
-    config: evcharge-config-svc.evcharge.svc.cluster.local
-    customer: evcharge-customer-svc.evcharge.svc.cluster.local
-    device: evcharge-device-svc.evcharge.svc.cluster.local
-    location: evcharge-location-svc.evcharge.svc.cluster.local
-    marketing: evcharge-marketing-svc.evcharge.svc.cluster.local
-    notification: evcharge-notification-svc.evcharge.svc.cluster.local
-    payment: evcharge-payment-svc.evcharge.svc.cluster.local
-    point: evcharge-point-svc.evcharge.svc.cluster.local
-    report: evcharge-report-svc.evcharge.svc.cluster.local
-    user: evcharge-user-svc.evcharge.svc.cluster.local
+    authn: http://lms-authn-service
+    author: http://lms-author-service
 
 springdoc:
   api-docs:
@@ -52,9 +41,9 @@ springdoc:
   show-actuator: false
   swagger-ui:
     urls:
-      - name: ev-api-gateway-service
+      - name: lms-api-gateway-service
         url: /v3/api-docs
-      - name: ev-authentication-service
-        url: /swagger-authn/v3/api-docs
-      - name: ev-authorization-service
-        url: /swagger-author/v3/api-docs
+      - name: lms-authn-service
+        url: /authn/v3/api-docs
+      - name: lms-author-service
+        url: /author/v3/api-docs

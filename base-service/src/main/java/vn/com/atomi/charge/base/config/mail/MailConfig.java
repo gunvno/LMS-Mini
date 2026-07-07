@@ -23,6 +23,15 @@ public class MailConfig {
   @Value("${config.mail.password}")
   String password;
 
+  @Value("${config.mail.smtp.auth:true}")
+  Boolean smtpAuth;
+
+  @Value("${config.mail.smtp.starttls-enable:true}")
+  Boolean starttlsEnable;
+
+  @Value("${config.mail.smtp.ssl-enable:false}")
+  Boolean sslEnable;
+
   @Bean
   public JavaMailSender getJavaMailSender() {
     JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
@@ -33,8 +42,9 @@ public class MailConfig {
     mailSender.setPassword(password);
 
     Properties props = mailSender.getJavaMailProperties();
-    props.put("mail.smtp.auth", "true");
-    props.put("mail.smtp.ssl.enable", "true");
+    props.put("mail.smtp.auth", smtpAuth.toString());
+    props.put("mail.smtp.starttls.enable", starttlsEnable.toString());
+    props.put("mail.smtp.ssl.enable", sslEnable.toString());
     props.put("mail.smtp.ssl.trust", host);
 
     return mailSender;
