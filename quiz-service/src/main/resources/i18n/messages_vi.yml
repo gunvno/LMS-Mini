@@ -102,6 +102,7 @@ import_excel:
 quiz:
   not_found: "Không tìm thấy quiz"
   invalid_status: "Trạng thái quiz không hợp lệ"
+  attempt_limit_reached: "Bạn đã đạt số lần làm quiz tối đa"
 
 question:
   not_found: "Không tìm thấy câu hỏi"

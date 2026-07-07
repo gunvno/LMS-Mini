@@ -10,5 +10,5 @@ import vn.com.atomi.charge.quiz.model.dto.EnrollmentDto;
 @FeignClient(name = "lms-learning-service")
 public interface LearningClient {
     @GetMapping("/internal/v1/enrollment/{courseId}")
-    BaseResponse<EnrollmentDto> findEnrollment(@PathVariable("courseId") String courseId);;
+    BaseResponse<EnrollmentDto> findEnrollment(@PathVariable("courseId") String courseId);
 }

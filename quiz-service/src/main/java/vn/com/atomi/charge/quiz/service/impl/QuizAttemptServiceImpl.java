@@ -13,6 +13,7 @@ import vn.com.atomi.charge.quiz.model.dto.QuizAttemptDto;
 import vn.com.atomi.charge.quiz.model.entity.QuizAttemptEntity;
 import vn.com.atomi.charge.quiz.model.entity.QuizEntity;
 import vn.com.atomi.charge.quiz.model.enums.QuizAttemptStatus;
+import vn.com.atomi.charge.quiz.model.enums.QuizStatus;
 import vn.com.atomi.charge.quiz.repository.QuizAttemptRepository;
 import vn.com.atomi.charge.quiz.repository.QuizRepository;
 import vn.com.atomi.charge.quiz.repository.client.LearningClient;
@@ -31,23 +32,52 @@ public class QuizAttemptServiceImpl extends BaseService<QuizAttemptRepository, Q
     private LearningClient learningClient;
     @Override
     public BaseResponse<QuizAttemptDto> startQuiz(String QuizId){
-        response=new BaseResponse<>();
+        response = new BaseResponse<>();
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userId = authentication.getName();
-        if(QuizId.isEmpty())
+        if (QuizId == null || QuizId.isBlank())
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("quiz.not_found"));
         Optional<QuizEntity> optionalQuiz = quizRepository.findEntityById(QuizId);
-        if(optionalQuiz.isEmpty())
+        if (optionalQuiz.isEmpty())
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("quiz.not_found"));
-        BaseResponse<EnrollmentDto> enrollment = learningClient.findEnrollment(optionalQuiz.get().getCourseId());
+
+        QuizEntity quiz = optionalQuiz.get();
+        if (quiz.getStatus() != QuizStatus.ACTIVE) {
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("quiz.invalid_status"));
+        }
+
+        BaseResponse<EnrollmentDto> enrollmentResponse = learningClient.findEnrollment(optionalQuiz.get().getCourseId());
+        if (enrollmentResponse == null || enrollmentResponse.getData() == null
+                || enrollmentResponse.getData().getId() == null
+                || !userId.equals(enrollmentResponse.getData().getUserId())
+                || !quiz.getCourseId().equals(enrollmentResponse.getData().getCourseId())) {
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("learning.not_found"));
+        }
+
+        Optional<QuizAttemptEntity> inProgressAttempt = repository
+                .findFirstByQuizIdAndUserIdAndStatusAndDeletedAtIsNullOrderByStartedAtDesc(
+                        QuizId,
+                        userId,
+                        QuizAttemptStatus.IN_PROGRESS);
+        if (inProgressAttempt.isPresent()) {
+            response.setData(mapper.toDto(inProgressAttempt.get()));
+            response.setStatus(HttpStatus.OK);
+            return response;
+        }
+
+        long attemptCount = repository.countByQuizIdAndUserIdAndDeletedAtIsNull(QuizId, userId);
+        Integer maxAttempts = quiz.getMaxAttempts();
+        if (maxAttempts != null && maxAttempts > 0 && attemptCount >= maxAttempts) {
+            return BaseResponse.fail(HttpStatus.CONFLICT, i18n.getMessage("quiz.attempt_limit_reached"));
+        }
+
         QuizAttemptEntity quizAttempt = new QuizAttemptEntity();
         quizAttempt.setQuizId(QuizId);
         quizAttempt.setUserId(userId);
-        quizAttempt.setEnrollmentId(enrollment.getData().getId());
+        quizAttempt.setEnrollmentId(enrollmentResponse.getData().getId());
         quizAttempt.setStartedAt(LocalDateTime.now());
         quizAttempt.setStatus(QuizAttemptStatus.IN_PROGRESS);
         quizAttempt.setPassed(false);
-        quizAttempt.setCreatedDate(LocalDateTime.now());
         quizAttempt.setCreatedBy(userId);
 
         QuizAttemptEntity saved = repository.save(quizAttempt);
