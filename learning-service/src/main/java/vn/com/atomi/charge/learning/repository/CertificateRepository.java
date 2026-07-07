@@ -14,4 +14,5 @@ public interface CertificateRepository extends BaseRepository<CertificateEntity,
             String userId, Pageable pageable);
 
     boolean existsByCertificateCodeAndDeletedAtIsNull(String certificateCode);
+    Optional<CertificateEntity> findByCodeAndDeletedAtIsNull(String CertificateCode);
 }

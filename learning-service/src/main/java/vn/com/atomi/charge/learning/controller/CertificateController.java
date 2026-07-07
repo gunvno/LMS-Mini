@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.com.atomi.charge.base.controller.BaseController;
@@ -18,5 +19,9 @@ public class CertificateController extends BaseController<CertificateService, Ce
     @GetMapping("/my-certificates")
     public ResponseEntity<?> getMyCertificate(Pageable pageable){
         return ResponseEntity.ok(service.getMyCertificate(pageable));
+    }
+    @GetMapping("/certificates/{code}")
+    public ResponseEntity<?> verifyCertificate(@PathVariable String code){
+        return ResponseEntity.ok(service.verifyCertificate(code));
     }
 }

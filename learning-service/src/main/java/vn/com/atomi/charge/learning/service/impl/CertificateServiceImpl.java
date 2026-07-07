@@ -36,4 +36,18 @@ implements CertificateService {
         return responsePage;
     }
 
+    @Override
+    public BaseResponse<CertificateDto> verifyCertificate(String certificateCode){
+        response = new BaseResponse<>();
+        if(certificateCode.isEmpty())
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("certificat.not_found"));
+        Optional<CertificateEntity> optionalCertificate = repository.findByCodeAndDeletedAtIsNull(certificateCode);
+        if(optionalCertificate.isEmpty())
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("certificate.not_found"));
+        CertificateEntity entity = optionalCertificate.get();
+        response.setData(mapper.toDto(entity));
+        response.setStatus(HttpStatus.OK);
+        return response;
+    }
+
 }
