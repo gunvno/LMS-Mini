@@ -13,4 +13,5 @@ public interface QuizAttemptRepository extends BaseRepository<QuizAttemptEntity,
 			String quizId,
 			String userId,
 			QuizAttemptStatus status);
+	boolean existsByQuizIdAndUserIdAndPassedTrueAndDeletedAtIsNull(String quizId, String userId);
 }

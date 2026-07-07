@@ -28,6 +28,7 @@ import vn.com.atomi.charge.learning.model.enums.LearningProgressStatus;
 import vn.com.atomi.charge.learning.repository.CertificateRepository;
 import vn.com.atomi.charge.learning.repository.Client.AuthnClient;
 import vn.com.atomi.charge.learning.repository.Client.CourseClient;
+import vn.com.atomi.charge.learning.repository.Client.QuizClient;
 import vn.com.atomi.charge.learning.repository.EnrollmentRepository;
 import vn.com.atomi.charge.learning.repository.LearningProgressRepository;
 import vn.com.atomi.charge.learning.service.interfaces.EnrollmentService;
@@ -47,7 +48,7 @@ public class EnrollmentServiceImpl extends BaseService<EnrollmentRepository,
     private final AuthnClient authnClient;
     private final LearningProgressRepository learningProgressRepository;
     private final CertificateRepository certificateRepository;
-
+    private final QuizClient quizClient;
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BaseResponse<EnrollmentDto> enrollCourse(BaseRequest<EnrollmentDto> dto, String courseId){
@@ -157,6 +158,11 @@ public class EnrollmentServiceImpl extends BaseService<EnrollmentRepository,
         if(optionalEnrollment.get().getProgressPercent() < 100.0 && optionalEnrollment.get().getStatus() != EnrollmentStatus.COMPLETED){
             String localizedMsg = i18n.getMessage("course.not_finish");
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, localizedMsg);
+        }
+        boolean quizCompleted = quizClient.completeQuizRequiredInCourse(courseId);
+
+        if (!quizCompleted) {
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, "quiz.required_not_passed");
         }
         EnrollmentEntity enrollment = optionalEnrollment.get();
         enrollment.setCompletedAt(LocalDateTime.now());
