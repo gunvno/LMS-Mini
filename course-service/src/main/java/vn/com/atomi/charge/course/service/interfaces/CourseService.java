@@ -15,4 +15,5 @@ public interface CourseService
     BaseResponse<CourseDto> approveCourse(String id);
     BaseResponse<CourseDto> rejectCourse(RejectCourseRequest request);
     BaseResponse<CourseDto> archiveCourse(String id);
+    Boolean checkCourse(String courseId);
 }

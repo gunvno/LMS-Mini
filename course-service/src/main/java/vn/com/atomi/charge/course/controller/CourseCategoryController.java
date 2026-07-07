@@ -8,7 +8,7 @@ import vn.com.atomi.charge.course.model.dto.CourseCategoryDto;
 import vn.com.atomi.charge.course.service.interfaces.CourseCategoryService;
 
 @RestController
-@RequestMapping("/course-categories")
+@RequestMapping("/api/v1/course-categories")
 @Tag(name = "Course Categories", description = "CRUD APIs for course categories")
 public class CourseCategoryController
     extends BaseController<CourseCategoryService, CourseCategoryDto> {

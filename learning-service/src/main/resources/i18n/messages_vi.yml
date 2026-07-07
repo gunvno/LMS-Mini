@@ -1,3 +1,15 @@
 learning:
   not_found: "Không tìm thấy dữ liệu học tập"
   invalid_status: "Trạng thái học tập không hợp lệ"
+course:
+  not_found: "Không tìm thấy khóa học"
+  invalid_submit_review_status: "Chỉ khóa học ở trạng thái DRAFT hoặc REJECTED mới được gửi duyệt"
+  invalid_approve_course_status: "Chỉ khóa học ở trạng thái PENDING_REVIEW mới được duyệt"
+  invalid_archive_course_status: "Chỉ khóa học ở trạng thái PUBLISH mới được lưu trữ"
+  not_finish: "Khoá học chưa được hoàn thành"
+user:
+  not_found: "Không tìm người dùng"
+lesson:
+  not_found: "Không tìm bài học"
+certificate:
+  not_found: "Không tìm chứng chỉ"

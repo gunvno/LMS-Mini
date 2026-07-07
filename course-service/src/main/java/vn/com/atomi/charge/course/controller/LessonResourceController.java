@@ -8,7 +8,7 @@ import vn.com.atomi.charge.course.model.dto.LessonResourceDto;
 import vn.com.atomi.charge.course.service.interfaces.LessonResourceService;
 
 @RestController
-@RequestMapping("/lesson-resources")
+@RequestMapping("/api/v1/lesson-resources")
 @Tag(name = "Lesson Resources", description = "CRUD APIs for lesson resources")
 public class LessonResourceController
     extends BaseController<LessonResourceService, LessonResourceDto> {

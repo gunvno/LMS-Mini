@@ -1,4 +1,6 @@
 package vn.com.atomi.charge.learning.model.response;
 
-public class EnrollmentResponse {
+import vn.com.atomi.charge.base.model.response.BaseResponse;
+
+public class EnrollmentResponse extends BaseResponse<String> {
 }

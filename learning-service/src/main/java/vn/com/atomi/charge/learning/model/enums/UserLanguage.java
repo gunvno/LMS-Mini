@@ -1,4 +1,4 @@
-package vn.com.atomi.charge.authn.model.enums;
+package vn.com.atomi.charge.learning.model.enums;
 
 public enum UserLanguage {
     VI,

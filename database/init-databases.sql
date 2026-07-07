@@ -252,7 +252,7 @@ CREATE TABLE IF NOT EXISTS tbl_enrollments (
     course_id VARCHAR(36) NOT NULL,
     enrolled_at DATETIME NOT NULL,
     completed_at DATETIME NULL,
-    progress_percent DECIMAL(5,2) DEFAULT 0,
+    progress_percent DOUBLE DEFAULT 0,
     status VARCHAR(30) NOT NULL,
 
     UNIQUE KEY uk_enrollments_user_course (user_id, course_id),

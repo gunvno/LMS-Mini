@@ -6,7 +6,6 @@ import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.annotations.security.SecuritySchemes;
-import io.swagger.v3.oas.annotations.servers.Server;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.media.StringSchema;
@@ -20,8 +19,7 @@ import java.util.List;
 @Configuration
 @OpenAPIDefinition(
         info = @io.swagger.v3.oas.annotations.info.Info(title = "API Service", version = "1.0"),
-        security = {@SecurityRequirement(name = "bearerAuth")},
-        servers = @Server(url = "/${server.prefix}", description = "API Service")
+        security = {@SecurityRequirement(name = "bearerAuth")}
 )
 @SecuritySchemes({
         @SecurityScheme(

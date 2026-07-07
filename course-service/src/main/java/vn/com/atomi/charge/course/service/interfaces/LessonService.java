@@ -10,8 +10,14 @@ import vn.com.atomi.charge.course.model.dto.LessonDto;
 import vn.com.atomi.charge.course.model.entity.LessonEntity;
 import vn.com.atomi.charge.course.repository.LessonRepository;
 
+import java.util.List;
+
 public interface LessonService
     extends IBaseService<LessonRepository, LessonDto, LessonEntity, LessonMapper> {
     BaseResponse<LessonDto> createLesson(BaseRequest<LessonDto> dto, String courseId);
     BaseResponse<Page<LessonDto>> getLessonByCourseId(String courseId, Pageable pageable);
+    Boolean checkLesson(String lessonId);
+    String getCourseByLessonId(String lessonId);
+    List<LessonDto> getLessonsByCourseIdNoPage(String courseId);
+    Double countLessonInCourse(String courseId);
 }

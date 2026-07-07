@@ -20,8 +20,10 @@ import vn.com.atomi.charge.course.model.entity.CourseEntity;
 import vn.com.atomi.charge.course.model.entity.LessonEntity;
 import vn.com.atomi.charge.course.repository.CourseRepository;
 import vn.com.atomi.charge.course.repository.LessonRepository;
+import vn.com.atomi.charge.course.service.interfaces.CourseService;
 import vn.com.atomi.charge.course.service.interfaces.LessonService;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -31,6 +33,9 @@ public class LessonServiceImpl
 
     @Autowired
     private CourseRepository courseRepository;
+    @Autowired
+    private CourseService courseService;
+
     @Override
     protected boolean isDuplicate(BaseRequest<LessonDto> request) {
         LessonDto dto = request.getData();
@@ -100,4 +105,49 @@ public class LessonServiceImpl
         }
         return responsePage;
     }
+    @Override
+    public Boolean checkLesson(String lessonId){
+        if(lessonId.isBlank()){
+            return false;
+        }
+        Optional<LessonEntity> optionalLesson = repository.findEntityById(lessonId);
+        return optionalLesson.isPresent();
+    }
+    @Override
+    public String getCourseByLessonId(String lessonId){
+        if(!checkLesson(lessonId)){
+            return i18n.getMessage("lesson.not_found");
+        }
+        Optional<LessonEntity> optionalLesson = repository.findEntityById(lessonId);
+        if(optionalLesson.isEmpty()){
+            return i18n.getMessage("lesson.not_found");
+        }
+        String courseId = optionalLesson.get().getCourseId();
+        if(courseId.isEmpty()) return i18n.getMessage("course.not_found");
+        return courseId;
+    }
+
+    @Override
+    public List<LessonDto> getLessonsByCourseIdNoPage(String courseId){
+            if (!StringUtils.hasText(courseId)) {
+                return List.of();
+            }
+
+            Optional<CourseEntity> optionalCourse = courseRepository.findEntityById(courseId);
+            if (optionalCourse.isEmpty()) {
+                return List.of();
+            }
+
+            return mapper.toDto(repository.findByCourseIdAndDeletedAtIsNullOrderByOrderIndexAscCreatedDateAsc(courseId));
+    }
+
+    @Override
+    public Double countLessonInCourse(String courseId) {
+        if(!courseService.checkCourse(courseId)){
+            return 0.0;
+        }
+        return (double) repository.countByCourseIdAndDeletedAtIsNull(courseId);
+    }
 }
+
+

@@ -10,7 +10,6 @@ import lombok.Setter;
 import vn.com.atomi.charge.base.model.entity.BaseEntity;
 import vn.com.atomi.charge.learning.model.enums.EnrollmentStatus;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
@@ -32,7 +31,7 @@ public class EnrollmentEntity extends BaseEntity {
     private LocalDateTime completedAt;
 
     @Column(name = "progress_percent")
-    private BigDecimal progressPercent;
+    private Double progressPercent;
 
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)

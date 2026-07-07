@@ -1,4 +1,4 @@
-package vn.com.atomi.charge.course.model.enums;
+package vn.com.atomi.charge.learning.model.enums;
 
 public enum LessonStatus {
     DRAFT,

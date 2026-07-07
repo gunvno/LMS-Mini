@@ -1,14 +1,15 @@
-package vn.com.atomi.charge.authn.model.dto;
+package vn.com.atomi.charge.learning.model.dto;
 
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import lombok.Getter;
 import lombok.Setter;
-import vn.com.atomi.charge.authn.model.enums.AuthnUserStatus;
-import vn.com.atomi.charge.authn.model.enums.UserLanguage;
+import vn.com.atomi.charge.learning.model.enums.AuthnUserStatus;
+import vn.com.atomi.charge.learning.model.enums.UserLanguage;
 import vn.com.atomi.charge.base.model.dto.BaseDto;
 
 import java.time.LocalDateTime;
+
 @Getter
 @Setter
 

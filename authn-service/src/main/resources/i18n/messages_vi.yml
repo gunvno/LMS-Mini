@@ -9,3 +9,5 @@ AUTHN_989: "Mật khẩu mới không được trùng với mật khẩu hiện 
 AUTHN_988: "Mật khẩu không hợp lệ"
 AUTHN_987: "Tính năng đăng nhập FaceID/TouchID đã bị vô hiệu hóa do sai mật khẩu. Vui lòng nhập mật khẩu để tiếp tục Đăng nhập."
 AUTHN_999: "Tài khoản đang bị khóa."
+user:
+  not_found: "Không tìm người dùng"

@@ -4,3 +4,10 @@ course:
 image:
   file_required: "Please choose an image file"
   invalid_content_type: "Uploaded file must be an image"
+lesson:
+  not_found: "Lesson not found"
+lesson_resource:
+  title_required: "Please enter resource title"
+  file_or_url_required: "Please upload a file or enter a resource URL"
+  only_one_source_allowed: "Please upload a file or enter a URL, not both"
+  invalid_content_type: "Lesson resource file only supports PDF or DOCX"

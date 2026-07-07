@@ -5,7 +5,10 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import vn.com.atomi.charge.base.model.entity.BaseEntity;
 import vn.com.atomi.charge.course.model.enums.LessonResourceStatus;
@@ -13,6 +16,9 @@ import vn.com.atomi.charge.course.model.enums.LessonResourceType;
 
 @Getter
 @Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "tbl_lesson_resources")
 public class LessonResourceEntity extends BaseEntity {

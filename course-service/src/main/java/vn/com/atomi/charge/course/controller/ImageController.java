@@ -8,7 +8,7 @@ import vn.com.atomi.charge.course.model.dto.ImageDto;
 import vn.com.atomi.charge.course.service.interfaces.ImageService;
 
 @RestController
-@RequestMapping("/images")
+@RequestMapping("/api/v1/images")
 @Tag(name = "Images", description = "CRUD APIs for images")
 public class ImageController extends BaseController<ImageService, ImageDto> {
 }

@@ -4,3 +4,10 @@ course:
 image:
   file_required: "ກະລຸນາເລືອກໄຟລ໌ຮູບພາບ"
   invalid_content_type: "ໄຟລ໌ທີ່ອັບໂຫຼດຕ້ອງເປັນຮູບພາບ"
+lesson:
+  not_found: "ບໍ່ພົບບົດຮຽນ"
+lesson_resource:
+  title_required: "ກະລຸນາປ້ອນຊື່ຊັບພະຍາກອນ"
+  file_or_url_required: "ກະລຸນາອັບໂຫຼດໄຟລ໌ ຫຼື ປ້ອນລິ້ງຊັບພະຍາກອນ"
+  only_one_source_allowed: "ກະລຸນາເລືອກອັບໂຫຼດໄຟລ໌ ຫຼື ປ້ອນລິ້ງ ຢ່າງໃດຢ່າງໜຶ່ງເທົ່ານັ້ນ"
+  invalid_content_type: "ໄຟລ໌ຊັບພະຍາກອນຮອງຮັບສະເພາະ PDF ຫຼື DOCX"

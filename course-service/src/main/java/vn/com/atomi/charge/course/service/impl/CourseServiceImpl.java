@@ -140,4 +140,13 @@ public class CourseServiceImpl
         return BaseResponse.success(HttpStatus.OK, mapper.toDto(saved));
     }
 
+    @Override
+    public Boolean checkCourse(String courseId){
+        if(courseId.isBlank()){
+            return false;
+        }
+        Optional<CourseEntity> optionalCourse = repository.findEntityById(courseId);
+        return optionalCourse.isPresent();
+    }
+
 }

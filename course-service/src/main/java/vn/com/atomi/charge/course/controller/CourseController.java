@@ -12,7 +12,7 @@ import vn.com.atomi.charge.course.service.interfaces.CourseService;
 import vn.com.atomi.charge.course.service.interfaces.ImageService;
 
 @RestController
-@RequestMapping("/courses")
+@RequestMapping("/api/v1/courses")
 @Tag(name = "Courses", description = "CRUD APIs for courses")
 public class CourseController extends BaseController<CourseService, CourseDto> {
 
@@ -44,5 +44,4 @@ public class CourseController extends BaseController<CourseService, CourseDto> {
                                                @RequestPart("file") MultipartFile file) {
         return ResponseEntity.ok(imageService.uploadCourseImage(id, file));
     }
-
 }
