@@ -66,15 +66,8 @@ config:
         login: ${config.api.prefix.public}/${config.api.version}/auth/login
         refresh-token: ${config.api.prefix.public}/${config.api.version}/auth/refresh-token
         logout: ${config.api.prefix.public}/${config.api.version}/auth/logout
-        logout-all: ${config.api.prefix.public}/${config.api.version}/auth/logout-all
         change-password: ${config.api.prefix.public}/${config.api.version}/auth/change-password
         me: ${config.api.prefix.public}/${config.api.version}/auth/me
-        update-language: ${config.api.prefix.public}/${config.api.version}/auth/me/language
-    admin:
-      user:
-        create-user: ${config.api.prefix.admin}/${config.api.version}/auth/users
-        lock-user: ${config.api.prefix.admin}/${config.api.version}/auth/users/{id}/lock
-        unlock-user: ${config.api.prefix.admin}/${config.api.version}/auth/users/{id}/unlock
     internal:
       verify:
         validate-token: ${config.api.prefix.internal}/${config.api.version}/verify/validate-token

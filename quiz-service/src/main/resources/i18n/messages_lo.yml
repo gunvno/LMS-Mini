@@ -104,5 +104,12 @@ quiz:
   invalid_status: "ສະຖານະ quiz ບໍ່ຖືກຕ້ອງ"
   attempt_limit_reached: "ທ່ານໄດ້ເຖິງຈໍານວນຄັ້ງທີ່ເຮັດ quiz ສູງສຸດແລ້ວ"
 
+quiz_attempt:
+  not_found: "ບໍ່ພົບການເຮັດ quiz"
+  invalid_status: "ການເຮັດ quiz ຍັງບໍ່ພ້ອມສໍາລັບການສົ່ງ"
+
+answer:
+  not_found: "ບໍ່ພົບຄໍາຕອບ"
+
 question:
   not_found: "ບໍ່ພົບຄໍາຖາມ"

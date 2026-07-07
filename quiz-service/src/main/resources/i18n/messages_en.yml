@@ -104,5 +104,12 @@ quiz:
   invalid_status: "Invalid quiz status"
   attempt_limit_reached: "You have reached the maximum number of quiz attempts"
 
+quiz_attempt:
+  not_found: "Quiz attempt not found"
+  invalid_status: "Quiz attempt is not in a submitable state"
+
+answer:
+  not_found: "Answer not found"
+
 question:
   not_found: "Question not found"

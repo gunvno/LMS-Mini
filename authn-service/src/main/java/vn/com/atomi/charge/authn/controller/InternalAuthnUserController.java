@@ -1,13 +1,18 @@
 package vn.com.atomi.charge.authn.controller;
 
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import vn.com.atomi.charge.authn.model.dto.AuthnUserDto;
 import vn.com.atomi.charge.authn.service.interfaces.AuthnUserService;
 import vn.com.atomi.charge.base.model.response.BaseResponse;
 
 @RestController
 @RequestMapping("/internal/v1/AuthnUser")
-public class InternalAuthnUserController{
+public class InternalAuthnUserController {
+
     private final AuthnUserService authnUserService;
 
     public InternalAuthnUserController(AuthnUserService authnUserService) {
@@ -18,8 +23,9 @@ public class InternalAuthnUserController{
     public Boolean checkUser(@PathVariable String id) {
         return authnUserService.checkUser(id);
     }
+
     @GetMapping("/{userId}/info")
-    public BaseResponse<AuthnUserDto> getUserById(@PathVariable String userId){
+    public BaseResponse<AuthnUserDto> getUserById(@PathVariable String userId) {
         return authnUserService.getUserById(userId);
     }
 }

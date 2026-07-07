@@ -113,6 +113,129 @@ CREATE TABLE IF NOT EXISTS tbl_user_roles (
     KEY idx_user_roles_deleted_at (deleted_at)
 );
 
+CREATE TABLE IF NOT EXISTS tbl_permissions (
+    id VARCHAR(36) PRIMARY KEY,
+    version BIGINT NOT NULL DEFAULT 0,
+    created_by VARCHAR(50),
+    created_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_modified_by VARCHAR(50),
+    last_modified_date DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+
+    name VARCHAR(255) NOT NULL,
+    code VARCHAR(100) NOT NULL,
+    description TEXT,
+    status VARCHAR(30) NOT NULL,
+
+    UNIQUE KEY uk_permissions_code (code),
+    KEY idx_permissions_status (status),
+    KEY idx_permissions_deleted_at (deleted_at)
+);
+
+CREATE TABLE IF NOT EXISTS tbl_role_permissions (
+    id VARCHAR(36) PRIMARY KEY,
+    version BIGINT NOT NULL DEFAULT 0,
+    created_by VARCHAR(50),
+    created_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_modified_by VARCHAR(50),
+    last_modified_date DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+
+    role_id VARCHAR(36) NOT NULL,
+    permission_id VARCHAR(36) NOT NULL,
+
+    UNIQUE KEY uk_role_permissions_role_permission (role_id, permission_id),
+    KEY idx_role_permissions_role_id (role_id),
+    KEY idx_role_permissions_permission_id (permission_id),
+    KEY idx_role_permissions_deleted_at (deleted_at)
+);
+
+INSERT INTO tbl_roles (id, code, name, description, status, created_by, created_date, last_modified_by, last_modified_date, deleted_at)
+SELECT UUID(), 'ADMIN', 'Admin', 'System administrator', 'ACTIVE', 'system', NOW(), 'system', NOW(), NULL
+WHERE NOT EXISTS (SELECT 1 FROM tbl_roles WHERE code = 'ADMIN');
+
+INSERT INTO tbl_roles (id, code, name, description, status, created_by, created_date, last_modified_by, last_modified_date, deleted_at)
+SELECT UUID(), 'INSTRUCTOR', 'Instructor', 'Course instructor', 'ACTIVE', 'system', NOW(), 'system', NOW(), NULL
+WHERE NOT EXISTS (SELECT 1 FROM tbl_roles WHERE code = 'INSTRUCTOR');
+
+INSERT INTO tbl_roles (id, code, name, description, status, created_by, created_date, last_modified_by, last_modified_date, deleted_at)
+SELECT UUID(), 'STUDENT', 'Student', 'Course student', 'ACTIVE', 'system', NOW(), 'system', NOW(), NULL
+WHERE NOT EXISTS (SELECT 1 FROM tbl_roles WHERE code = 'STUDENT');
+
+INSERT INTO tbl_permissions (id, name, code, description, status, created_by, created_date, last_modified_by, last_modified_date, deleted_at)
+SELECT UUID(), 'Permission Manage', 'PERMISSION_MANAGE', 'Manage permissions and role mappings', 'ACTIVE', 'system', NOW(), 'system', NOW(), NULL
+WHERE NOT EXISTS (SELECT 1 FROM tbl_permissions WHERE code = 'PERMISSION_MANAGE');
+
+INSERT INTO tbl_permissions (id, name, code, description, status, created_by, created_date, last_modified_by, last_modified_date, deleted_at)
+SELECT UUID(), 'Role View', 'ROLE_VIEW', 'View roles', 'ACTIVE', 'system', NOW(), 'system', NOW(), NULL
+WHERE NOT EXISTS (SELECT 1 FROM tbl_permissions WHERE code = 'ROLE_VIEW');
+
+INSERT INTO tbl_permissions (id, name, code, description, status, created_by, created_date, last_modified_by, last_modified_date, deleted_at)
+SELECT UUID(), 'User View', 'USER_VIEW', 'View users', 'ACTIVE', 'system', NOW(), 'system', NOW(), NULL
+WHERE NOT EXISTS (SELECT 1 FROM tbl_permissions WHERE code = 'USER_VIEW');
+
+INSERT INTO tbl_permissions (id, name, code, description, status, created_by, created_date, last_modified_by, last_modified_date, deleted_at)
+SELECT UUID(), 'User Update', 'USER_UPDATE', 'Update users', 'ACTIVE', 'system', NOW(), 'system', NOW(), NULL
+WHERE NOT EXISTS (SELECT 1 FROM tbl_permissions WHERE code = 'USER_UPDATE');
+
+INSERT INTO tbl_permissions (id, name, code, description, status, created_by, created_date, last_modified_by, last_modified_date, deleted_at)
+SELECT UUID(), 'Course View', 'COURSE_VIEW', 'View courses', 'ACTIVE', 'system', NOW(), 'system', NOW(), NULL
+WHERE NOT EXISTS (SELECT 1 FROM tbl_permissions WHERE code = 'COURSE_VIEW');
+
+INSERT INTO tbl_permissions (id, name, code, description, status, created_by, created_date, last_modified_by, last_modified_date, deleted_at)
+SELECT UUID(), 'Course Manage', 'COURSE_MANAGE', 'Manage courses', 'ACTIVE', 'system', NOW(), 'system', NOW(), NULL
+WHERE NOT EXISTS (SELECT 1 FROM tbl_permissions WHERE code = 'COURSE_MANAGE');
+
+INSERT INTO tbl_permissions (id, name, code, description, status, created_by, created_date, last_modified_by, last_modified_date, deleted_at)
+SELECT UUID(), 'Lesson Manage', 'LESSON_MANAGE', 'Manage lessons', 'ACTIVE', 'system', NOW(), 'system', NOW(), NULL
+WHERE NOT EXISTS (SELECT 1 FROM tbl_permissions WHERE code = 'LESSON_MANAGE');
+
+INSERT INTO tbl_permissions (id, name, code, description, status, created_by, created_date, last_modified_by, last_modified_date, deleted_at)
+SELECT UUID(), 'Quiz Manage', 'QUIZ_MANAGE', 'Manage quizzes', 'ACTIVE', 'system', NOW(), 'system', NOW(), NULL
+WHERE NOT EXISTS (SELECT 1 FROM tbl_permissions WHERE code = 'QUIZ_MANAGE');
+
+INSERT INTO tbl_permissions (id, name, code, description, status, created_by, created_date, last_modified_by, last_modified_date, deleted_at)
+SELECT UUID(), 'Quiz Attempt', 'QUIZ_ATTEMPT', 'Start quiz attempt', 'ACTIVE', 'system', NOW(), 'system', NOW(), NULL
+WHERE NOT EXISTS (SELECT 1 FROM tbl_permissions WHERE code = 'QUIZ_ATTEMPT');
+
+INSERT INTO tbl_permissions (id, name, code, description, status, created_by, created_date, last_modified_by, last_modified_date, deleted_at)
+SELECT UUID(), 'Notice View', 'NOTICE_VIEW', 'View notices', 'ACTIVE', 'system', NOW(), 'system', NOW(), NULL
+WHERE NOT EXISTS (SELECT 1 FROM tbl_permissions WHERE code = 'NOTICE_VIEW');
+
+INSERT INTO tbl_permissions (id, name, code, description, status, created_by, created_date, last_modified_by, last_modified_date, deleted_at)
+SELECT UUID(), 'Notice Send', 'NOTICE_SEND', 'Send notices', 'ACTIVE', 'system', NOW(), 'system', NOW(), NULL
+WHERE NOT EXISTS (SELECT 1 FROM tbl_permissions WHERE code = 'NOTICE_SEND');
+
+INSERT INTO tbl_role_permissions (id, role_id, permission_id, created_by, created_date, last_modified_by, last_modified_date, deleted_at)
+SELECT UUID(), r.id, p.id, 'system', NOW(), 'system', NOW(), NULL
+FROM tbl_roles r
+JOIN tbl_permissions p ON p.code IN ('PERMISSION_MANAGE','ROLE_VIEW','USER_VIEW','USER_UPDATE','COURSE_VIEW','COURSE_MANAGE','LESSON_MANAGE','QUIZ_MANAGE','QUIZ_ATTEMPT','NOTICE_VIEW','NOTICE_SEND')
+WHERE r.code = 'ADMIN'
+    AND NOT EXISTS (
+            SELECT 1 FROM tbl_role_permissions rp
+            WHERE rp.role_id = r.id AND rp.permission_id = p.id
+    );
+
+INSERT INTO tbl_role_permissions (id, role_id, permission_id, created_by, created_date, last_modified_by, last_modified_date, deleted_at)
+SELECT UUID(), r.id, p.id, 'system', NOW(), 'system', NOW(), NULL
+FROM tbl_roles r
+JOIN tbl_permissions p ON p.code IN ('COURSE_VIEW','COURSE_MANAGE','LESSON_MANAGE','QUIZ_MANAGE','QUIZ_ATTEMPT','NOTICE_VIEW')
+WHERE r.code = 'INSTRUCTOR'
+    AND NOT EXISTS (
+            SELECT 1 FROM tbl_role_permissions rp
+            WHERE rp.role_id = r.id AND rp.permission_id = p.id
+    );
+
+INSERT INTO tbl_role_permissions (id, role_id, permission_id, created_by, created_date, last_modified_by, last_modified_date, deleted_at)
+SELECT UUID(), r.id, p.id, 'system', NOW(), 'system', NOW(), NULL
+FROM tbl_roles r
+JOIN tbl_permissions p ON p.code IN ('COURSE_VIEW','QUIZ_ATTEMPT','NOTICE_VIEW')
+WHERE r.code = 'STUDENT'
+    AND NOT EXISTS (
+            SELECT 1 FROM tbl_role_permissions rp
+            WHERE rp.role_id = r.id AND rp.permission_id = p.id
+    );
+
 -- =========================================================
 -- course-service
 -- =========================================================

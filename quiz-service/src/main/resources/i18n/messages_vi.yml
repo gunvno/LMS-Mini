@@ -104,5 +104,12 @@ quiz:
   invalid_status: "Trạng thái quiz không hợp lệ"
   attempt_limit_reached: "Bạn đã đạt số lần làm quiz tối đa"
 
+quiz_attempt:
+  not_found: "Không tìm thấy lượt làm quiz"
+  invalid_status: "Lượt làm quiz chưa ở trạng thái có thể nộp"
+
+answer:
+  not_found: "Không tìm thấy đáp án"
+
 question:
   not_found: "Không tìm thấy câu hỏi"

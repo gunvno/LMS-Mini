@@ -22,7 +22,7 @@ public class QuestionDto extends BaseDto<String> {
     private String content;
 
     @NotNull(groups = Create.class)
-    @Schema(description = "Type of question", example = "SINGLE_CHOICE", allowableValues = {"SINGLE_CHOICE", "MULTIPLE_CHOICE"})
+    @Schema(description = "Type of question", example = "SINGLE_CHOICE", allowableValues = {"SINGLE_CHOICE"})
     private QuestionType questionType;
 
     @NotNull(groups = Create.class)

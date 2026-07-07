@@ -63,13 +63,9 @@ config:
     public:
       role:
         get-all: ${config.api.prefix.public}/${config.api.version}/roles
-        create: ${config.api.prefix.public}/${config.api.version}/roles
-        get-detail: ${config.api.prefix.public}/${config.api.version}/roles/{id}
-        update: ${config.api.prefix.public}/${config.api.version}/roles/{id}
-        delete: ${config.api.prefix.public}/${config.api.version}/roles/{id}
+        get-detail: ${config.api.prefix.public}/${config.api.version}/roles/{roleCode}
       user-role:
         assign: ${config.api.prefix.public}/${config.api.version}/user-roles
-        remove: ${config.api.prefix.public}/${config.api.version}/user-roles
         get-user-roles: ${config.api.prefix.public}/${config.api.version}/users/{userId}/roles
     internal:
       role:
