@@ -60,14 +60,29 @@ spring:
               enabled: true
               lower-case-service-id: true
           routes:
+            - id: lms-authn-continental-auth-token
+              uri: lb://lms-authn-service
+              predicates:
+                - Path=/auth/token
+              filters:
+                - SetPath=/api/v1/auth/login
+            - id: lms-authn-continental-auth-refresh
+              uri: lb://lms-authn-service
+              predicates:
+                - Path=/auth/refresh
+              filters:
+                - SetPath=/api/v1/auth/refresh-token
+            - id: lms-authn-continental-auth-userinfo
+              uri: lb://lms-authn-service
+              predicates:
+                - Path=/auth/userinfo
+              filters:
+                - SetPath=/api/v1/auth/me
             - id: lms-authn-continental-auth
               uri: lb://lms-authn-service
               predicates:
                 - Path=/auth/**
               filters:
-                - RewritePath=/auth/token, /api/v1/auth/login
-                - RewritePath=/auth/refresh, /api/v1/auth/refresh-token
-                - RewritePath=/auth/userinfo, /api/v1/auth/me
                 - RewritePath=/auth/(?<path>.*), /api/v1/auth/$\{path}
             - id: lms-authn-continental-users
               uri: lb://lms-authn-service

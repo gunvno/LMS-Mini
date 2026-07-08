@@ -10,7 +10,10 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.media.StringSchema;
 import io.swagger.v3.oas.models.parameters.Parameter;
+import io.swagger.v3.oas.models.servers.Server;
+import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springdoc.core.customizers.OperationCustomizer;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -32,11 +35,26 @@ import java.util.List;
 public class SwaggerConfig {
 
     @Bean
-    public OpenAPI customOpenAPI() {
+    public OpenAPI customOpenAPI(@Value("${spring.application.name:}") String applicationName) {
         return new OpenAPI().info(new Info()
                 .title("API Service")
                 .description("API Service")
-                .version("1.0.0"));
+                .version("1.0.0"))
+                .servers(List.of(new Server().url(resolveGatewayPrefix(applicationName))));
+    }
+
+    @Bean
+    public OpenApiCustomizer gatewayServerCustomizer(@Value("${spring.application.name:}") String applicationName) {
+        return openApi -> openApi.setServers(List.of(new Server().url(resolveGatewayPrefix(applicationName))));
+    }
+
+    private String resolveGatewayPrefix(String applicationName) {
+        if (applicationName != null
+                && applicationName.startsWith("lms-")
+                && applicationName.endsWith("-service")) {
+            return "/" + applicationName.substring(4, applicationName.length() - 8);
+        }
+        return "/";
     }
 
     @Bean

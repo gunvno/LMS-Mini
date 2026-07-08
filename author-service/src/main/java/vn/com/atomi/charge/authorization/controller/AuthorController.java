@@ -118,6 +118,18 @@ public class AuthorController {
 		return authorService.getUserRoles(userId);
 	}
 
+	@GetMapping("/api/v1/users/me/roles")
+	@PreAuthorize("hasAuthority('USER_PROFILE_VIEW')")
+	public BaseResponse<List<String>> getMyRoles() {
+		return authorService.getMyRoles();
+	}
+
+	@GetMapping("/api/v1/users/me/permissions")
+	@PreAuthorize("hasAuthority('USER_PROFILE_VIEW')")
+	public BaseResponse<List<String>> getMyPermissions() {
+		return authorService.getMyPermissions();
+	}
+
 	@GetMapping("/internal/v1/users/{userId}/permissions")
 	public BaseResponse<List<String>> getUserPermissions(@PathVariable String userId) {
 		return authorService.getUserPermissions(userId);

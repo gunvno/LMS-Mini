@@ -45,7 +45,11 @@ public interface AuthorService {
 
 	BaseResponse<List<String>> getUserRoles(String userId);
 
+	BaseResponse<List<String>> getMyRoles();
+
 	BaseResponse<List<String>> getUserPermissions(String userId);
+
+	BaseResponse<List<String>> getMyPermissions();
 
 	BaseResponse<List<String>> getUsersByRole(String roleCode);
 }

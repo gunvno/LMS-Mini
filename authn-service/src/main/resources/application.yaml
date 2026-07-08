@@ -1,5 +1,6 @@
 server:
   port: 8081
+  forward-headers-strategy: framework
   shutdown: graceful
   http2:
     enabled: true

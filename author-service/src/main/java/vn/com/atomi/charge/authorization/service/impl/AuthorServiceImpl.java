@@ -281,6 +281,9 @@ public class AuthorServiceImpl implements AuthorService {
 
 	@Override
 	public BaseResponse<List<String>> getUserRoles(String userId) {
+		if (!StringUtils.hasText(userId)) {
+			return BaseResponse.success(HttpStatus.OK, List.of());
+		}
 		List<String> roles = userRoleRepository.findByUserIdAndDeletedAtIsNull(userId).stream()
 				.map(UserRoleEntity::getRoleId)
 				.map(roleId -> roleRepository.findEntityById(roleId).orElse(null))
@@ -291,12 +294,22 @@ public class AuthorServiceImpl implements AuthorService {
 	}
 
 	@Override
+	public BaseResponse<List<String>> getMyRoles() {
+		return getUserRoles(currentUserId());
+	}
+
+	@Override
 	public BaseResponse<List<String>> getUserPermissions(String userId) {
 		if (!StringUtils.hasText(userId)) {
 			return BaseResponse.success(HttpStatus.OK, List.of());
 		}
 
 		return BaseResponse.success(HttpStatus.OK, getEffectivePermissionCodes(userId));
+	}
+
+	@Override
+	public BaseResponse<List<String>> getMyPermissions() {
+		return getUserPermissions(currentUserId());
 	}
 
 	@Override
