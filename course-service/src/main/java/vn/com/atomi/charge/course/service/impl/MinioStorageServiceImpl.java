@@ -1,6 +1,7 @@
 package vn.com.atomi.charge.course.service.impl;
 
 import io.minio.BucketExistsArgs;
+import io.minio.GetObjectArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import vn.com.atomi.charge.course.config.minio.MinioProperties;
+import vn.com.atomi.charge.course.model.storage.StorageFile;
 import vn.com.atomi.charge.course.model.storage.StorageUploadResult;
 import vn.com.atomi.charge.course.service.interfaces.StorageService;
 
@@ -55,6 +57,22 @@ public class MinioStorageServiceImpl implements StorageService {
             );
         } catch (Exception ex) {
             throw new RuntimeException("Upload file to MinIO failed", ex);
+        }
+    }
+
+    @Override
+    public StorageFile download(String filePath) {
+        try {
+            byte[] content = minioClient.getObject(
+                GetObjectArgs.builder()
+                    .bucket(properties.getBucket())
+                    .object(filePath)
+                    .build()
+            ).readAllBytes();
+
+            return new StorageFile(content, null);
+        } catch (Exception ex) {
+            throw new RuntimeException("Download file from MinIO failed", ex);
         }
     }
 

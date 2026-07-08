@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -76,5 +77,17 @@ public class ImageController extends BaseController<ImageService, ImageDto> {
     @PreAuthorize("hasAuthority('IMAGE_MANAGE')")
     public ResponseEntity<?> deleteMany(@RequestBody List<String> ids) {
         return ResponseEntity.ok(service.delete(ids));
+    }
+
+    @GetMapping(value = "/{id}/view")
+    @PreAuthorize("hasAuthority('IMAGE_VIEW')")
+    public ResponseEntity<byte[]> viewImage(@PathVariable String id) {
+        return service.viewImage(id, false);
+    }
+
+    @GetMapping(value = "/{id}/download", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    @PreAuthorize("hasAuthority('IMAGE_VIEW')")
+    public ResponseEntity<byte[]> downloadImage(@PathVariable String id) {
+        return service.viewImage(id, true);
     }
 }

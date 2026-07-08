@@ -108,4 +108,16 @@ public class CourseController extends BaseController<CourseService, CourseDto> {
                                                @RequestPart("file") MultipartFile file) {
         return ResponseEntity.ok(imageService.uploadCourseImage(id, file));
     }
+
+    @GetMapping("/{id}/images")
+    @PreAuthorize("hasAuthority('IMAGE_VIEW')")
+    public ResponseEntity<?> getCourseImages(@PathVariable String id) {
+        return ResponseEntity.ok(imageService.getCourseImages(id));
+    }
+
+    @GetMapping("/{id}/images/primary/view")
+    @PreAuthorize("hasAuthority('IMAGE_VIEW')")
+    public ResponseEntity<byte[]> viewPrimaryCourseImage(@PathVariable String id) {
+        return imageService.viewPrimaryCourseImage(id);
+    }
 }
