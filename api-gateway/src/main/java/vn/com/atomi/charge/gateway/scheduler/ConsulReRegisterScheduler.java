@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.cloud.consul.serviceregistry.ConsulAutoServiceRegistration;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,7 @@ import java.util.List;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnBean(ConsulAutoServiceRegistration.class)
 public class ConsulReRegisterScheduler {
 
   @Value("${spring.cloud.consul.discovery.instance-id}")
@@ -35,23 +37,25 @@ public class ConsulReRegisterScheduler {
 
   private final ConsulAutoServiceRegistration autoServiceRegistration;
 
-  @Scheduled(fixedDelay = 10000) // kiểm tra mỗi 10s
+  @Scheduled(fixedDelay = 10000)
   public void checkAndRegister() {
     try {
       if (this.consulClient == null) {
         consulClient = new ConsulClient(consulHost, consulPort);
       }
 
-      // Lấy danh sách service đã đăng ký trên agent
-      Response<List<CatalogService>> response =  consulClient.getCatalogService(serviceName, QueryParams.DEFAULT);
+      Response<List<CatalogService>> response =
+              consulClient.getCatalogService(serviceName, QueryParams.DEFAULT);
+
       List<CatalogService> instances = response.getValue();
 
-      if(instances.isEmpty()) {
+      if (instances.isEmpty()) {
         autoServiceRegistration.stop();
         Thread.sleep(2000);
         autoServiceRegistration.start();
         return;
       }
+
       boolean instanceExists = false;
       for (CatalogService cs : instances) {
         String id = cs.getServiceId();
@@ -62,7 +66,7 @@ public class ConsulReRegisterScheduler {
       }
 
       if (!instanceExists) {
-        log.warn("Instance [{}] missing in catalog. Re-registering...", instanceId );
+        log.warn("Instance [{}] missing in catalog. Re-registering...", instanceId);
         autoServiceRegistration.stop();
         Thread.sleep(2000);
         autoServiceRegistration.start();
