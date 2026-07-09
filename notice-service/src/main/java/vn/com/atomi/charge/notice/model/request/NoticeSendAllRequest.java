@@ -7,10 +7,7 @@ import vn.com.atomi.charge.notice.model.enums.NoticeType;
 
 @Getter
 @Setter
-public class NoticeSendUserRequest {
-
-    @NotBlank
-    private String userId;
+public class NoticeSendAllRequest {
 
     @NotBlank
     private String title;

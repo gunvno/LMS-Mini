@@ -1,4 +1,7 @@
 package vn.com.atomi.charge.notice.repository;
 
-public interface NoticeDeliveryLogRepository {
+import vn.com.atomi.charge.base.repository.BaseRepository;
+import vn.com.atomi.charge.notice.model.entity.NoticeDeliveryLogEntity;
+
+public interface NoticeDeliveryLogRepository extends BaseRepository<NoticeDeliveryLogEntity, String> {
 }

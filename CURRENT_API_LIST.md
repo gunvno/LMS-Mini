@@ -245,4 +245,30 @@ Gateway prefix: `/quiz`.
 
 ## Notice Service
 
-Hiện tại trong repo chưa có controller public/internal cho notice-service. Service mới có entity/domain cho thông báo, recipient, delivery log và user device, nên chưa có API runtime để liệt kê ở đây.
+Gateway prefix: `/notice`.
+
+## Notice Service - Device
+
+| Method | Gateway API | Raw service API | Chức năng |
+|---|---|---|---|
+| POST | `/notice/api/v1/devices/register` | `/api/v1/devices/register` | User hiện tại đăng ký/lưu FCM token thiết bị |
+| POST | `/notice/api/v1/devices/deactivate` | `/api/v1/devices/deactivate` | User hiện tại tắt FCM token thiết bị |
+
+## Notice Service - User Notice
+
+| Method | Gateway API | Raw service API | Chức năng |
+|---|---|---|---|
+| GET | `/notice/api/v1/notices/me` | `/api/v1/notices/me` | Lấy danh sách thông báo của user hiện tại |
+| GET | `/notice/api/v1/notices/me/unread-count` | `/api/v1/notices/me/unread-count` | Đếm thông báo chưa đọc của user hiện tại |
+| POST | `/notice/api/v1/notices/{recipientId}/read` | `/api/v1/notices/{recipientId}/read` | Đánh dấu một thông báo đã đọc |
+| POST | `/notice/api/v1/notices/read-all` | `/api/v1/notices/read-all` | Đánh dấu toàn bộ thông báo đã đọc |
+
+### Notice Internal API
+
+| Method | Internal API | Chức năng |
+|---|---|---|
+| GET | `/internal/v1/devices/users/{userId}/active` | Lấy danh sách thiết bị active của một user |
+| POST | `/internal/v1/notices/send-user` | Gửi thông báo cho một user |
+| POST | `/internal/v1/notices/send-users` | Gửi thông báo cho nhiều user |
+| POST | `/internal/v1/notices/send-role` | Gửi thông báo cho các user thuộc một role |
+| POST | `/internal/v1/notices/send-all` | Gửi thông báo cho tất cả user đang có thiết bị active |

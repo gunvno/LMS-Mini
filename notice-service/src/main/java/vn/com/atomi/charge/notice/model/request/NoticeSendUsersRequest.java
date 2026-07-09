@@ -1,16 +1,19 @@
 package vn.com.atomi.charge.notice.model.request;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.Getter;
 import lombok.Setter;
 import vn.com.atomi.charge.notice.model.enums.NoticeType;
 
+import java.util.List;
+
 @Getter
 @Setter
-public class NoticeSendUserRequest {
+public class NoticeSendUsersRequest {
 
-    @NotBlank
-    private String userId;
+    @NotEmpty
+    private List<String> userIds;
 
     @NotBlank
     private String title;
