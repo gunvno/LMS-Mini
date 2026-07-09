@@ -64,6 +64,7 @@ public class AuthenticationFilter implements WebFilter {
 
     if (path.equals("/auth/token")
             || path.startsWith("/auth/")
+            || path.startsWith("/api/v1/auth/")
             || path.startsWith("/authn/api/v1/auth/")
             || path.startsWith("/actuator/")
             || path.startsWith("/swagger-ui")

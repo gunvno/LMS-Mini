@@ -84,6 +84,10 @@ spring:
                 - Path=/auth/**
               filters:
                 - RewritePath=/auth/(?<path>.*), /api/v1/auth/$\{path}
+            - id: lms-authn-service-direct-auth
+              uri: lb://lms-authn-service
+              predicates:
+                - Path=/api/v1/auth/**
             - id: lms-authn-continental-users
               uri: lb://lms-authn-service
               predicates:

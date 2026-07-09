@@ -76,10 +76,10 @@ public class AuthnServiceImpl implements AuthnService {
 	@Override
 	public AuthenticationResponse authenticate(AuthenticationRequest request) {
 		AuthnUserEntity user = userRepository.findByUsernameOrEmail(request.getUsername(), request.getUsername())
-				.orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED.getErrorCode(), "LOGIN_FAILED"));
+				.orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED.getErrorCode()));
 
 		if (user.getStatus() != AuthnUserStatus.ACTIVE || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-			throw new BusinessException(ErrorCode.LOGIN_FAILED.getErrorCode(), "LOGIN_FAILED");
+			throw new BusinessException(ErrorCode.LOGIN_FAILED.getErrorCode());
 		}
 
 		user.setLastLoginAt(LocalDateTime.now());
