@@ -89,6 +89,8 @@ Gateway prefix: `/course`.
 |---|---|---|---|
 | GET | `/course/api/v1/courses` | `/api/v1/courses` | Danh sách khóa học, phân trang/lọc |
 | GET | `/course/api/v1/courses/{id}` | `/api/v1/courses/{id}` | Chi tiết khóa học |
+| GET | `/course/api/v1/courses/published` | `/api/v1/courses/published` | Danh sách khóa học đã publish cho học sinh/khách xem |
+| GET | `/course/api/v1/courses/{id}/published` | `/api/v1/courses/{id}/published` | Chi tiết khóa học đã publish cho học sinh/khách xem |
 | POST | `/course/api/v1/courses` | `/api/v1/courses` | Tạo khóa học |
 | POST | `/course/api/v1/courses/{id}` | `/api/v1/courses/{id}` | Cập nhật khóa học |
 | DELETE | `/course/api/v1/courses/{id}` | `/api/v1/courses/{id}` | Xóa mềm khóa học |
@@ -155,6 +157,7 @@ Gateway prefix: `/course`.
 | Method | Internal API | Chức năng |
 |---|---|---|
 | POST | `/internal/v1/courses/{id}/check` | Kiểm tra khóa học tồn tại |
+| GET | `/internal/v1/courses/{id}/published` | Kiểm tra khóa học tồn tại và đang `PUBLISHED` |
 | POST | `/internal/v1/lesson/{id}/check` | Kiểm tra bài học tồn tại |
 | GET | `/internal/v1/lesson/{id}/course` | Tìm courseId theo lessonId |
 | GET | `/internal/v1/lesson/course/{id}` | Lấy danh sách lesson theo courseId |

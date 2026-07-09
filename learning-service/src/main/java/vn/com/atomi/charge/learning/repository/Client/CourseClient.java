@@ -14,6 +14,9 @@ public interface CourseClient {
     @PostMapping("/internal/v1/courses/{id}/check")
     Boolean existsCourseById(@PathVariable("id") String id);
 
+    @GetMapping("/internal/v1/courses/{id}/published")
+    Boolean existsPublishedCourseById(@PathVariable("id") String id);
+
     @PostMapping("/internal/v1/lesson/{id}/check")
     Boolean existsLessonById(@PathVariable("id") String id);
     @GetMapping("/internal/v1/lesson/{id}/course")

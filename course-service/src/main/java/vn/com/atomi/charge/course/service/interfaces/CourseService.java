@@ -1,5 +1,7 @@
 package vn.com.atomi.charge.course.service.interfaces;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import vn.com.atomi.charge.base.model.response.BaseResponse;
 import vn.com.atomi.charge.base.service.IBaseService;
 import vn.com.atomi.charge.course.mapper.CourseMapper;
@@ -16,4 +18,7 @@ public interface CourseService
     BaseResponse<CourseDto> rejectCourse(RejectCourseRequest request);
     BaseResponse<CourseDto> archiveCourse(String id);
     Boolean checkCourse(String courseId);
+    Boolean checkPublishedCourse(String courseId);
+    BaseResponse<Page<CourseDto>> getPublishedCourses(Pageable pageable);
+    BaseResponse<CourseDto> getPublishedCourseDetails(String id);
 }

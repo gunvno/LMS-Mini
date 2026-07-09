@@ -156,7 +156,8 @@ Gateway prefix: `/course`
 |---|---|---|---:|---|
 | GET | `/course/api/v1/course-categories` | course-service | Optional | Lấy danh mục khóa học để filter catalog |
 | GET | `/course/api/v1/courses` | course-service | Optional | Lấy danh sách khóa học, catalog |
-| GET | `/course/api/v1/courses/{id}` | course-service | Optional | Chi tiết khóa học |
+| GET | `/course/api/v1/courses/published` | course-service | Public | Danh sách khóa học đã publish |
+| GET | `/course/api/v1/courses/{id}/published` | course-service | Public | Chi tiết khóa học đã publish |
 | GET | `/course/api/v1/courses/{id}/images` | course-service | Optional | Lấy metadata ảnh khóa học |
 | GET | `/course/api/v1/courses/{id}/images/primary/view` | course-service | Optional | Xem ảnh chính khóa học |
 | GET | `/course/api/v1/courses/{courseId}/lessons` | course-service | Optional/Yes | Lấy danh sách bài học theo khóa |
@@ -256,7 +257,7 @@ API:
 
 | API | Service |
 |---|---|
-| `GET /course/api/v1/courses?page=0&size=6` | course-service |
+| `GET /course/api/v1/courses/published?page=0&size=6` | course-service |
 | `GET /course/api/v1/courses/{id}/images/primary/view` | course-service |
 | `GET /learning/api/v1/certificates/{code}` | learning-service |
 
@@ -339,7 +340,7 @@ API:
 | API | Service | Mục đích |
 |---|---|---|
 | `GET /course/api/v1/course-categories` | course-service | Filter category |
-| `GET /course/api/v1/courses` | course-service | Danh sách khóa học |
+| `GET /course/api/v1/courses/published` | course-service | Danh sách khóa học đã publish |
 | `GET /course/api/v1/courses/{id}/images/primary/view` | course-service | Ảnh card |
 | `GET /learning/api/v1/my-courses` | learning-service | Nếu logged in, đánh dấu khóa đã đăng ký |
 
@@ -393,7 +394,7 @@ API:
 |---|---|
 | `GET /learning/api/v1/my-courses` | learning-service |
 | `GET /learning/api/v1/my-certificates` | learning-service |
-| `GET /course/api/v1/courses/{id}` | course-service |
+| `GET /course/api/v1/courses/{id}/published` | course-service |
 | `GET /course/api/v1/courses/{courseId}/lessons` | course-service |
 | `GET /quiz/api/v1/quiz?courseId={courseId}` | quiz-service |
 
@@ -768,7 +769,7 @@ Các điểm sau nếu muốn frontend student hoàn chỉnh hơn thì nên bổ
 | Answers API trả field `correct` | Có nguy cơ lộ đáp án nếu frontend không cẩn thận | Tạo endpoint attempt-safe không trả `correct` |
 | Chưa có API result detail attempt rõ ràng trong danh sách hiện tại | Màn kết quả quiz khó render chi tiết | `GET /quiz/api/v1/quiz-attempts/{id}` |
 | Chưa có API danh sách attempt của user | Không xem lịch sử làm quiz | `GET /quiz/api/v1/my-quiz-attempts` |
-| Chưa có API public course chỉ published | Catalog phải tự lọc | `GET /course/api/v1/public/courses` |
+| API public course chỉ published | Catalog dùng trực tiếp | `GET /course/api/v1/courses/published` |
 
 ## 14. Ưu Tiên Implement Theo Phase
 
@@ -829,4 +830,3 @@ Trước khi coi là xong, frontend student cần đạt:
 - [ ] Mobile không vỡ layout.
 - [ ] 401 tự logout hoặc redirect login.
 - [ ] 403 hiển thị không có quyền.
-

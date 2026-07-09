@@ -35,6 +35,7 @@ public class SecurityConfig {
             "/webjars/**",
             "/public/**",
             "/internal/**",
+            "/api/v1/health-check",
             "/auth/register",
             "/auth/token",
             "/auth/login",
@@ -49,23 +50,9 @@ public class SecurityConfig {
             "/authn/api/v1/auth/otp-register",
             "/authn/api/v1/auth/otp-verify",
             "/authn/api/v1/.well-known/jwks.json",
-            "/location/**",
-            "/charge/api/v1/station/map?**",
-            "/charge/api/v1/station/info/**",
-            "/charge/api/v1/transaction/charging-soc",
-            "/charge/api/v1/transaction/preparing",
-            "/charge/api/v1/transaction/authorize",
-            "/charge/api/v1/transaction/after-authorize",
-            "/charge/api/v1/transaction/after-stop",
-            "/device/api/v1/mobile/init-app",
-            "/notification/internal/v1/received",
-            "/payment/api/v1/*/return",
-            "/charge/cpo/api/versions/**",
-            "/charge/emsp/api/versions/**",
-            "/charge/cpo/api/2.2.1/**",
-            "/charge/emsp/api/2.2.1/**",
-            "/charge/ocpi/**",
-            "/api/v1/health-check"
+            "/course/api/v1/courses/published",
+            "/course/api/v1/courses/*/published",
+            "/course/api/v1/courses/*/images/primary/view"
     };
 
     @Bean

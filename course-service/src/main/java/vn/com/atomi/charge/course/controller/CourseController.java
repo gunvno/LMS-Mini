@@ -41,12 +41,24 @@ public class CourseController extends BaseController<CourseService, CourseDto> {
         return ResponseEntity.ok(dtos);
     }
 
+    @GetMapping("/published")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getPublishedCourses(Pageable pageable) {
+        return ResponseEntity.ok(service.getPublishedCourses(pageable));
+    }
+
     @Override
     @GetMapping(value = {"/{id}"})
     @PreAuthorize("hasAuthority('COURSE_VIEW')")
     public ResponseEntity<?> getDetails(@PathVariable("id") String id) {
         BaseResponse<CourseDto> dto = service.getDetails(id);
         return ResponseEntity.ok(dto);
+    }
+
+    @GetMapping("/{id}/published")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getPublishedCourseDetails(@PathVariable String id) {
+        return ResponseEntity.ok(service.getPublishedCourseDetails(id));
     }
 
     @Override

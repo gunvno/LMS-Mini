@@ -1,5 +1,7 @@
 package vn.com.atomi.charge.course.service.impl;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -147,6 +149,32 @@ public class CourseServiceImpl
         }
         Optional<CourseEntity> optionalCourse = repository.findEntityById(courseId);
         return optionalCourse.isPresent();
+    }
+
+    @Override
+    public Boolean checkPublishedCourse(String courseId) {
+        if (!StringUtils.hasText(courseId)) {
+            return false;
+        }
+        return repository.existsByIdAndStatusAndDeletedAtIsNull(courseId, CourseStatus.PUBLISHED);
+    }
+
+    @Override
+    public BaseResponse<Page<CourseDto>> getPublishedCourses(Pageable pageable) {
+        Page<CourseEntity> courses = repository.findByStatusAndDeletedAtIsNull(CourseStatus.PUBLISHED, pageable);
+        return BaseResponse.success(HttpStatus.OK, courses.map(mapper::toDto));
+    }
+
+    @Override
+    public BaseResponse<CourseDto> getPublishedCourseDetails(String id) {
+        if (!StringUtils.hasText(id)) {
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("course.not_found"));
+        }
+        Optional<CourseEntity> course = repository.findByIdAndStatusAndDeletedAtIsNull(id, CourseStatus.PUBLISHED);
+        if (course.isEmpty()) {
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("course.not_found"));
+        }
+        return BaseResponse.success(HttpStatus.OK, mapper.toDto(course.get()));
     }
 
 }

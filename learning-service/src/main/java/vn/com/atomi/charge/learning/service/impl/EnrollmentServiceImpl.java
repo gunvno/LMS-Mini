@@ -55,7 +55,23 @@ public class EnrollmentServiceImpl extends BaseService<EnrollmentRepository,
         response = new BaseResponse<>();
         try {
             getRequest();
+            String userId = currentUserId();
+            if (userId == null || userId.isBlank()) {
+                return BaseResponse.fail(HttpStatus.UNAUTHORIZED, i18n.getMessage("user.not_found"));
+            }
 
+            if (!Boolean.TRUE.equals(authnClient.checkUser(userId))) {
+                return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("user.not_found"));
+            }
+
+            if (dto == null) {
+                dto = new BaseRequest<>();
+            }
+            if (dto.getData() == null) {
+                dto.setData(new EnrollmentDto());
+            }
+
+            dto.getData().setUserId(userId);
             dto.getData().setCourseId(courseId);
 
             if (isDuplicate(dto)) {
@@ -63,7 +79,7 @@ public class EnrollmentServiceImpl extends BaseService<EnrollmentRepository,
                 return BaseResponse.fail(HttpStatus.BAD_REQUEST, localizedMsg);
             }
 
-            Boolean courseExists = courseClient.existsCourseById(courseId);
+            Boolean courseExists = courseClient.existsPublishedCourseById(courseId);
             if (!Boolean.TRUE.equals(courseExists)) {
                 return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("course.not_found"));
             }
@@ -99,6 +115,11 @@ public class EnrollmentServiceImpl extends BaseService<EnrollmentRepository,
 
 
         return response;
+    }
+
+    private String currentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication == null ? null : authentication.getName();
     }
     @Override
     protected boolean isDuplicate(BaseRequest<EnrollmentDto> request) {

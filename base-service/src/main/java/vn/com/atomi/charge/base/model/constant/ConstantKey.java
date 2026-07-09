@@ -20,6 +20,10 @@ public class ConstantKey {
             "/swagger-resources/**",
             "/webjars/**",
             "/public/**",
+            "/api/v1/public/**",
+            "/api/v1/courses/published",
+            "/api/v1/courses/*/published",
+            "/api/v1/courses/*/images/primary/view",
             "/internal/**"
     );
 
