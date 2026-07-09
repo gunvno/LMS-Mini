@@ -4,8 +4,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import vn.com.atomi.charge.authorization.client.AuthnClient;
+import vn.com.atomi.charge.authorization.model.dto.AuthnUserDto;
 import vn.com.atomi.charge.authorization.model.entity.PermissionEntity;
 import vn.com.atomi.charge.authorization.model.entity.RoleEntity;
 import vn.com.atomi.charge.authorization.model.entity.RolePermissionEntity;
@@ -17,6 +20,7 @@ import vn.com.atomi.charge.authorization.repository.AuthorRepo;
 import vn.com.atomi.charge.authorization.repository.PermissionRepo;
 import vn.com.atomi.charge.authorization.repository.RolePermissionRepo;
 import vn.com.atomi.charge.authorization.repository.UserRoleRepository;
+import vn.com.atomi.charge.base.model.response.BaseResponse;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -28,11 +32,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class DataInitializer implements ApplicationRunner {
 
-    private static final String ADMIN_USER_ID = "00000000-0000-0000-0000-000000000001";
+    private static final String ADMIN_USERNAME = "admin";
 
-    private static final String INSTRUCTOR_USER_ID = "00000000-0000-0000-0000-000000000002";
+    private static final String INSTRUCTOR_USERNAME = "instructor";
 
-    private static final String STUDENT_USER_ID = "00000000-0000-0000-0000-000000000003";
+    private static final String STUDENT_USERNAME = "student";
 
     private static final Map<String, PermissionSeed> PERMISSIONS = new LinkedHashMap<>();
 
@@ -180,6 +184,8 @@ public class DataInitializer implements ApplicationRunner {
 
     private final UserRoleRepository userRoleRepository;
 
+    private final AuthnClient authnClient;
+
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
@@ -193,9 +199,9 @@ public class DataInitializer implements ApplicationRunner {
         assignPermissions(instructor, INSTRUCTOR_PERMISSIONS);
         assignPermissions(student, STUDENT_PERMISSIONS);
 
-        assignUserRole(ADMIN_USER_ID, admin);
-        assignUserRole(INSTRUCTOR_USER_ID, instructor);
-        assignUserRole(STUDENT_USER_ID, student);
+        assignUserRoleByUsername(ADMIN_USERNAME, admin);
+        assignUserRoleByUsername(INSTRUCTOR_USERNAME, instructor);
+        assignUserRoleByUsername(STUDENT_USERNAME, student);
     }
 
     private RoleEntity ensureRole(RoleCode code, String name, String description) {
@@ -262,6 +268,24 @@ public class DataInitializer implements ApplicationRunner {
         fillAudit(userRole);
         userRoleRepository.save(userRole);
         log.warn("Assigned default LMS role. userId={}, role={}", userId, role.getCode());
+    }
+
+    private void assignUserRoleByUsername(String username, RoleEntity role) {
+        try {
+            BaseResponse<AuthnUserDto> response = authnClient.getUserByUsername(username);
+            if (response == null
+                    || response.getStatus() == null
+                    || !HttpStatus.OK.equals(response.getStatus())
+                    || response.getData() == null
+                    || response.getData().getId() == null) {
+                log.warn("Skipped assigning default LMS role. username={}, role={}", username, role.getCode());
+                return;
+            }
+            assignUserRole(response.getData().getId(), role);
+        } catch (Exception ex) {
+            log.warn("Could not assign default LMS role yet. username={}, role={}, reason={}",
+                    username, role.getCode(), ex.getMessage());
+        }
     }
 
     private void fillAudit(vn.com.atomi.charge.base.model.entity.BaseEntity entity) {

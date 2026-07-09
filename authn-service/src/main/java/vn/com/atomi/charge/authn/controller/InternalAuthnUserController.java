@@ -36,6 +36,11 @@ public class InternalAuthnUserController {
         return authnUserService.getUserById(userId);
     }
 
+    @GetMapping("/username/{username}/info")
+    public BaseResponse<AuthnUserDto> getUserByUsername(@PathVariable String username) {
+        return authnUserService.getUserByUsername(username);
+    }
+
     @PostMapping("/bulk")
     public BaseResponse<List<AuthnUserDto>> getUsersByIds(@RequestBody List<String> userIds) {
         return authnUserService.getUsersByIds(userIds);

@@ -56,6 +56,20 @@ public class AuthnUserServiceImpl extends BaseService<AuthnUserRepository, Authn
     }
 
     @Override
+    public BaseResponse<AuthnUserDto> getUserByUsername(String username) {
+        if (!StringUtils.hasText(username)) {
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, "user.invalid_request");
+        }
+
+        Optional<AuthnUserEntity> optionalUser = repository.findByUsername(username);
+        if (optionalUser.isEmpty()) {
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("user.not_found"));
+        }
+
+        return BaseResponse.success(HttpStatus.OK, mapper.toDto(optionalUser.get()));
+    }
+
+    @Override
     public BaseResponse<List<AuthnUserDto>> getUsersByIds(List<String> userIds) {
         if (userIds == null || userIds.isEmpty()) {
             return BaseResponse.success(HttpStatus.OK, List.of());

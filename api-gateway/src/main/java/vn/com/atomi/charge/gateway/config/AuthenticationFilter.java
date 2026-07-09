@@ -60,6 +60,16 @@ public class AuthenticationFilter implements WebFilter {
   @Override
   @NonNull
   public Mono<Void> filter(ServerWebExchange exchange, @NonNull WebFilterChain chain) {
+    String path = exchange.getRequest().getURI().getPath();
+
+    if (path.equals("/auth/token")
+            || path.startsWith("/auth/")
+            || path.startsWith("/authn/api/v1/auth/")
+            || path.startsWith("/actuator/")
+            || path.startsWith("/swagger-ui")
+            || path.startsWith("/v3/api-docs")) {
+      return chain.filter(exchange);
+    }
     ServerHttpRequest request = exchange.getRequest();
     if (!isAuthHeader(request)) {
       return chain.filter(exchange);

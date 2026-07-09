@@ -16,6 +16,7 @@ public interface AuthnUserService extends IBaseService<AuthnUserRepository, Auth
 {
     Boolean checkUser(String userId);
     BaseResponse<AuthnUserDto> getUserById(String userId);
+    BaseResponse<AuthnUserDto> getUserByUsername(String username);
     BaseResponse<List<AuthnUserDto>> getUsersByIds(List<String> userIds);
     BaseResponse<AuthnUserDto> createStaffUser(InternalCreateUserRequest request);
     BaseResponse<AuthnUserDto> updateUserStatus(String userId, InternalUpdateUserStatusRequest request);

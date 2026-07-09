@@ -24,6 +24,9 @@ public interface AuthnClient {
     @GetMapping("/internal/v1/AuthnUser/{userId}/info")
     BaseResponse<AuthnUserDto> getUserById(@PathVariable String userId);
 
+    @GetMapping("/internal/v1/AuthnUser/username/{username}/info")
+    BaseResponse<AuthnUserDto> getUserByUsername(@PathVariable String username);
+
     @PostMapping("/internal/v1/AuthnUser/bulk")
     BaseResponse<List<AuthnUserDto>> getUsersByIds(@RequestBody List<String> userIds);
 
