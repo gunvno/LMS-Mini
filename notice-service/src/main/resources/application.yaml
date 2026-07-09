@@ -62,6 +62,9 @@ spring:
             enable: true
 
 config:
+  firebase:
+    enabled: true
+    credentials-path: ${FIREBASE_CREDENTIALS_PATH:}
   service-name: lms-notice-service
   api:
     prefix:
