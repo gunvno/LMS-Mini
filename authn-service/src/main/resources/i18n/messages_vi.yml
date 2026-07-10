@@ -10,4 +10,11 @@ AUTHN_988: "Mật khẩu không hợp lệ"
 AUTHN_987: "Tính năng đăng nhập FaceID/TouchID đã bị vô hiệu hóa do sai mật khẩu. Vui lòng nhập mật khẩu để tiếp tục Đăng nhập."
 AUTHN_999: "Tài khoản đang bị khóa."
 user:
-  not_found: "Không tìm người dùng"
+  not_found: "Không tìm thấy người dùng"
+  invalid_request: "Yêu cầu người dùng không hợp lệ"
+auth:
+  username_existed: "Tên đăng nhập đã được sử dụng"
+  email_existed: "Email đã được đăng ký"
+  otp_required: "Bạn cần xác thực email bằng mã OTP trước khi tạo tài khoản"
+  otp_invalid: "Mã OTP không đúng hoặc đã hết hạn"
+  otp_email_send_failed: "Không gửi được mã OTP tới email. Vui lòng thử lại sau"

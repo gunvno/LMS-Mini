@@ -18,8 +18,8 @@ services:
       SPRING_DATA_REDIS_HOST: host.docker.internal
       SPRING_DATA_REDIS_PORT: 6379
       CONFIG_MINIO_URL: http://host.docker.internal:9000
-      CONFIG_MINIO_ACCESS_KEY: minioadmin
-      CONFIG_MINIO_SECRET_KEY: minioadmin
+      CONFIG_MINIO_ACCESS_KEY: ${CONFIG_MINIO_ACCESS_KEY:-minioadmin}
+      CONFIG_MINIO_SECRET_KEY: ${CONFIG_MINIO_SECRET_KEY:-minioadmin}
       CONFIG_MINIO_BUCKET: lms-mini
     ports:
       - 8085:8085

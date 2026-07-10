@@ -109,7 +109,7 @@ public class CourseController extends BaseController<CourseService, CourseDto> {
         return ResponseEntity.ok(service.rejectCourse(request));
     }
     @PostMapping("/{id}/archive")
-    @PreAuthorize("hasAuthority('COURSE_MANAGE')")
+    @PreAuthorize("hasAuthority('COURSE_REVIEW')")
     public ResponseEntity<?> archiveCourse(@PathVariable String id) {
         return ResponseEntity.ok(service.archiveCourse(id));
     }
@@ -128,7 +128,6 @@ public class CourseController extends BaseController<CourseService, CourseDto> {
     }
 
     @GetMapping("/{id}/images/primary/view")
-    @PreAuthorize("hasAuthority('IMAGE_VIEW')")
     public ResponseEntity<byte[]> viewPrimaryCourseImage(@PathVariable String id) {
         return imageService.viewPrimaryCourseImage(id);
     }

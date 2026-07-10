@@ -27,6 +27,8 @@ public interface AuthorService {
 
 	BaseResponse<RoleDto> assignRoleToUser(String userId, BaseRequest<UserRoleRequest> request);
 
+	BaseResponse<RoleDto> assignStudentRole(String userId);
+
 	BaseResponse<StaffAccountDto> createInstructorStaff(BaseRequest<StaffAccountCreationRequest> request);
 
 	BaseResponse<List<StaffAccountDto>> getStaffAccounts();

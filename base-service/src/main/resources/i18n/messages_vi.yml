@@ -12,6 +12,8 @@ common:
   not_found: "Không tìm thấy dữ liệu"
   invalid_input: "Kiểm tra lại thông tin nhập"
   max_file_size_exceed: "Kích thước ảnh tối đa: 5MB"
+  operation_failed: "Không thể hoàn tất yêu cầu. Vui lòng thử lại sau"
+  method_not_allowed: "Phương thức yêu cầu không được hỗ trợ"
 
 # =========================
 # Validation
@@ -23,6 +25,7 @@ validation:
   max_length: "{0} không được vượt quá {1} ký tự"
   email_invalid: "Email không hợp lệ"
   phone_invalid: "Số điện thoại không hợp lệ"
+  invalid_request: "Dữ liệu gửi lên không hợp lệ"
 
 # =========================
 # User Management
@@ -71,6 +74,25 @@ order:
   canceled: "Hủy đơn hàng thành công"
   payment_failed: "Thanh toán thất bại"
   payment_success: "Thanh toán thành công"
+
+# =========================
+# Payment / Billing
+# =========================
+payment:
+  not_found: "Không tìm thấy giao dịch thanh toán"
+  amount_invalid: "Số tiền thanh toán không hợp lệ"
+  enrollment_pending: "Đang chờ ghi danh khóa học"
+
+invoice:
+  not_found: "Không tìm thấy hóa đơn"
+  invalid_request: "Yêu cầu hóa đơn không hợp lệ"
+
+payos:
+  not_configured: "Cổng thanh toán chưa được cấu hình"
+  create_failed: "Không thể tạo liên kết thanh toán"
+  payment_lookup_failed: "Không thể tra cứu giao dịch thanh toán"
+  payment_not_found: "Không tìm thấy giao dịch PayOS"
+  sign_failed: "Không thể tạo chữ ký thanh toán"
 
 # =========================
 # Security & Auth

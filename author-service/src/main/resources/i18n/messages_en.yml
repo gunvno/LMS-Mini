@@ -2,3 +2,9 @@ AUTHN_993: "Your account has been temporarily locked. Please log in again after 
 AUTHN_994: "Incorrect login information. Please try again."
 AUTHN_995: "Your account has been temporarily locked for {0} minutes due to more than {1} failed attempts."
 AUTHN_998: "LOGIN_METHOD_INVALID"
+user:
+  not_found: "User not found"
+  invalid_request: "Invalid user request"
+staff:
+  not_found: "Staff not found"
+  invalid_request: "Invalid staff request"

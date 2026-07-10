@@ -1,21 +1,24 @@
 package vn.com.atomi.charge.quiz.service.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import vn.com.atomi.charge.base.service.BaseService;
 import vn.com.atomi.charge.quiz.mapper.QuizMapper;
 import vn.com.atomi.charge.quiz.model.dto.QuizDto;
-import vn.com.atomi.charge.quiz.model.entity.QuizAttemptEntity;
 import vn.com.atomi.charge.quiz.model.entity.QuizEntity;
 import vn.com.atomi.charge.quiz.model.enums.QuizStatus;
 import vn.com.atomi.charge.quiz.repository.QuizAttemptRepository;
 import vn.com.atomi.charge.quiz.repository.QuizRepository;
+import vn.com.atomi.charge.quiz.repository.client.CourseClient;
 import vn.com.atomi.charge.quiz.service.interfaces.QuizService;
+import vn.com.atomi.charge.base.model.request.BaseRequest;
+import vn.com.atomi.charge.base.model.response.BaseResponse;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class QuizServiceImpl extends BaseService<QuizRepository, QuizDto, QuizEntity, QuizMapper>
@@ -23,6 +26,46 @@ implements QuizService {
 
     @Autowired
     private QuizAttemptRepository attemptRepository;
+    @Autowired
+    private CourseClient courseClient;
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BaseResponse<QuizDto> create(BaseRequest<QuizDto> request) {
+        assertCanManageCourse(request.getData().getCourseId());
+        return super.create(request);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BaseResponse<QuizDto> update(BaseRequest<QuizDto> request) {
+        QuizEntity existing = repository.findEntityById(request.getData().getId())
+                .orElseThrow(() -> new AccessDeniedException("common.access_denied"));
+        assertCanManageCourse(existing.getCourseId());
+        assertCanManageCourse(request.getData().getCourseId());
+        return super.update(request);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BaseResponse<QuizDto> delete(String id) {
+        QuizEntity existing = repository.findEntityById(id)
+                .orElseThrow(() -> new AccessDeniedException("common.access_denied"));
+        assertCanManageCourse(existing.getCourseId());
+        return super.delete(id);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BaseResponse<QuizDto> delete(List<String> ids) {
+        ids.stream()
+                .map(id -> repository.findEntityById(id)
+                        .orElseThrow(() -> new AccessDeniedException("common.access_denied")))
+                .map(QuizEntity::getCourseId)
+                .distinct()
+                .forEach(this::assertCanManageCourse);
+        return super.delete(ids);
+    }
     @Override
     public boolean completeQuizRequiredInCourse(String courseId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -47,4 +90,22 @@ implements QuizService {
         }
 
         return true;
-    }}
+    }
+
+    private void assertCanManageCourse(String courseId) {
+        if (canReviewCourses()) {
+            return;
+        }
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userId = authentication == null ? null : authentication.getName();
+        if (userId == null || !Boolean.TRUE.equals(courseClient.isInstructorOwner(courseId, userId))) {
+            throw new AccessDeniedException("common.access_denied");
+        }
+    }
+
+    private boolean canReviewCourses() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> "COURSE_REVIEW".equals(authority.getAuthority()));
+    }
+}

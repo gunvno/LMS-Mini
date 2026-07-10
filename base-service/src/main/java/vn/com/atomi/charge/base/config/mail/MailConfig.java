@@ -11,16 +11,16 @@ import java.util.Properties;
 @Configuration
 public class MailConfig {
 
-  @Value("${config.mail.host}")
+  @Value("${spring.mail.host:${config.mail.host}}")
   String host;
 
-  @Value("${config.mail.port}")
+  @Value("${spring.mail.port:${config.mail.port}}")
   Integer port;
 
-  @Value("${config.mail.username}")
+  @Value("${spring.mail.username:${config.mail.username}}")
   String username;
 
-  @Value("${config.mail.password}")
+  @Value("${spring.mail.password:${config.mail.password}}")
   String password;
 
   @Value("${config.mail.smtp.auth:true}")
@@ -39,13 +39,23 @@ public class MailConfig {
     mailSender.setPort(port);
 
     mailSender.setUsername(username);
-    mailSender.setPassword(password);
+    // Google displays App Passwords in groups separated by spaces; SMTP expects the compact value.
+    mailSender.setPassword(password == null ? null : password
+        .replaceAll("\\s+", "")
+        .replace("\"", "")
+        .replace("'", ""));
 
     Properties props = mailSender.getJavaMailProperties();
     props.put("mail.smtp.auth", smtpAuth.toString());
     props.put("mail.smtp.starttls.enable", starttlsEnable.toString());
     props.put("mail.smtp.ssl.enable", sslEnable.toString());
     props.put("mail.smtp.ssl.trust", host);
+    props.put("mail.smtp.connectiontimeout", "5000");
+    props.put("mail.smtp.timeout", "5000");
+    props.put("mail.smtp.writetimeout", "5000");
+    props.put("mail.smtp.starttls.required", "true");
+    props.put("mail.smtp.auth.mechanisms", "LOGIN PLAIN");
+    props.put("mail.smtp.ssl.protocols", "TLSv1.2 TLSv1.3");
 
     return mailSender;
   }

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,15 +20,22 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class DataInitializer implements ApplicationRunner {
 
-    private static final String DEFAULT_PASSWORD = "123456";
-
     private final AuthnUserRepository userRepository;
 
     private final PasswordEncoder passwordEncoder;
 
+    @Value("${app.seed-demo-users:false}")
+    private boolean seedDemoUsers;
+
+    @Value("${app.demo-user-password:}")
+    private String demoUserPassword;
+
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
+        if (!seedDemoUsers || demoUserPassword.isBlank()) {
+            return;
+        }
         ensureDefaultUser("admin", "admin@gmail.com", "System Admin");
         ensureDefaultUser("instructor", "instructor@gmail.com", "Default Instructor");
         ensureDefaultUser("student", "student@gmail.com", "Default Student");
@@ -43,7 +51,7 @@ public class DataInitializer implements ApplicationRunner {
         user.setUsername(username);
         user.setEmail(email);
         user.setFullName(fullName);
-        user.setPasswordHash(passwordEncoder.encode(DEFAULT_PASSWORD));
+        user.setPasswordHash(passwordEncoder.encode(demoUserPassword));
         user.setLanguage(UserLanguage.VI);
         user.setStatus(AuthnUserStatus.ACTIVE);
         user.setFailedLoginAttempts(0);
@@ -55,7 +63,7 @@ public class DataInitializer implements ApplicationRunner {
 
         AuthnUserEntity saved = userRepository.save(user);
 
-        log.warn("Created default LMS account. id={}, username={}, email={}, password={}",
-                saved.getId(), username, email, DEFAULT_PASSWORD);
+        log.warn("Created demo LMS account. id={}, username={}, email={}",
+                saved.getId(), username, email);
     }
 }

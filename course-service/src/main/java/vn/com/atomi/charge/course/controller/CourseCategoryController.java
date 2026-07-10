@@ -49,7 +49,7 @@ public class CourseCategoryController
 
     @Override
     @PostMapping
-    @PreAuthorize("hasAuthority('CATEGORY_MANAGE')")
+    @PreAuthorize("hasAuthority('CATEGORY_MANAGE') and hasAuthority('COURSE_REVIEW')")
     @Validated(BaseDto.Create.class)
     public ResponseEntity<?> create(@RequestBody @Valid BaseRequest<CourseCategoryDto> dto) {
         return ResponseEntity.ok(service.create(dto));
@@ -57,7 +57,7 @@ public class CourseCategoryController
 
     @Override
     @PostMapping(value = {"/{id}"})
-    @PreAuthorize("hasAuthority('CATEGORY_MANAGE')")
+    @PreAuthorize("hasAuthority('CATEGORY_MANAGE') and hasAuthority('COURSE_REVIEW')")
     @Validated(BaseDto.Update.class)
     public ResponseEntity<?> update(@RequestBody @Valid BaseRequest<CourseCategoryDto> dto,
                                     @PathVariable String id) {
@@ -67,14 +67,14 @@ public class CourseCategoryController
 
     @Override
     @DeleteMapping(value = {"/{id}"})
-    @PreAuthorize("hasAuthority('CATEGORY_MANAGE')")
+    @PreAuthorize("hasAuthority('CATEGORY_MANAGE') and hasAuthority('COURSE_REVIEW')")
     public ResponseEntity<?> delete(@PathVariable String id) {
         return ResponseEntity.ok(service.delete(id));
     }
 
     @Override
     @DeleteMapping
-    @PreAuthorize("hasAuthority('CATEGORY_MANAGE')")
+    @PreAuthorize("hasAuthority('CATEGORY_MANAGE') and hasAuthority('COURSE_REVIEW')")
     public ResponseEntity<?> deleteMany(@RequestBody List<String> ids) {
         return ResponseEntity.ok(service.delete(ids));
     }

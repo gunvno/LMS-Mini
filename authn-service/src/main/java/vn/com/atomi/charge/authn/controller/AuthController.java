@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.com.atomi.charge.authn.model.request.AuthenticationRequest;
 import vn.com.atomi.charge.authn.model.request.ChangePasswordRequest;
+import vn.com.atomi.charge.authn.model.request.ForgotPasswordOtpRequest;
+import vn.com.atomi.charge.authn.model.request.ForgotPasswordResetRequest;
 import vn.com.atomi.charge.authn.model.request.IntrospectRequest;
 import vn.com.atomi.charge.authn.model.request.LogoutRequest;
 import vn.com.atomi.charge.authn.model.request.OtpRegisterRequest;
@@ -72,6 +74,18 @@ public class AuthController {
 	@PostMapping("/register")
 	public BaseResponse<?> register(@RequestBody @Valid RegistrationRequest request) {
 		return BaseResponse.success(org.springframework.http.HttpStatus.OK, authnService.register(request));
+	}
+
+	@PostMapping("/forgot-password/otp")
+	public BaseResponse<?> forgotPasswordOtp(@RequestBody @Valid ForgotPasswordOtpRequest request) {
+		authnService.sendForgotPasswordOtp(request.getEmail());
+		return BaseResponse.success(org.springframework.http.HttpStatus.OK, null);
+	}
+
+	@PostMapping("/forgot-password/reset")
+	public BaseResponse<?> forgotPasswordReset(@RequestBody @Valid ForgotPasswordResetRequest request) {
+		authnService.resetPassword(request);
+		return BaseResponse.success(org.springframework.http.HttpStatus.OK, null);
 	}
 
 	@PostMapping("/me")

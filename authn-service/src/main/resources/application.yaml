@@ -49,8 +49,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: longta2004.vtv3@gmail.com
-    password: irnyjvkkgsnmcfyk
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
     smtp:
       auth: true
       starttls-enable: true
@@ -60,10 +60,13 @@ spring:
         smtp:
           auth: true
           starttls:
-          enable: true
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
 
 jwt:
-  signerKey: 3cfa76ef14937c1c0ea519f8fc057a80fcd04a7420f8e8bcd0a7567c272e007b
+  signerKey: ${JWT_SIGNER_KEY:}
   valid-duration: 86400
   refreshable-duration: 604800
 
@@ -97,5 +100,5 @@ config:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: longta2004.vtv3@gmail.com
-    password: irnyjvkkgsnmcfyk
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}

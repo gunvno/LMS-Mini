@@ -16,4 +16,5 @@ public interface EnrollmentService extends IBaseService<EnrollmentRepository, En
     BaseResponse<Page<EnrollmentDto>> getMyEnroll(Pageable pageable);
     BaseResponse<EnrollmentDto> finishCourse(String courseId);
     BaseResponse<EnrollmentDto> findEnrollmentByCourseIdAndUserId(String courseId);
+    BaseResponse<EnrollmentDto> enrollCourseForUser(String userId, String courseId);
 }

@@ -6,6 +6,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.com.atomi.charge.course.service.interfaces.CourseService;
+import vn.com.atomi.charge.course.model.dto.CourseDto;
+import vn.com.atomi.charge.base.model.response.BaseResponse;
 
 @RestController
 @RequestMapping("/internal/v1/courses")
@@ -25,6 +27,16 @@ public class InternalCourseController {
     @GetMapping("/{id}/published")
     public Boolean checkPublishedCourse(@PathVariable String id) {
         return courseService.checkPublishedCourse(id);
+    }
+
+    @GetMapping("/{id}")
+    public BaseResponse<CourseDto> getCourse(@PathVariable String id) {
+        return courseService.getDetails(id);
+    }
+
+    @GetMapping("/{id}/instructors/{userId}/owner")
+    public Boolean isInstructorOwner(@PathVariable String id, @PathVariable String userId) {
+        return courseService.isInstructorOwner(id, userId);
     }
 
 }

@@ -1,5 +1,8 @@
 server:
   port: 8080
+
+internal:
+  service-key: ${INTERNAL_SERVICE_KEY:lms-mini-internal-change-me}
   shutdown: graceful
   http2:
     enabled: true
@@ -22,6 +25,8 @@ config:
     learning: localhost:8084
     quiz: localhost:8085
     notice: localhost:8086
+    billing: localhost:8087
+    invoice: localhost:8088
 
 spring:
   application:
@@ -140,6 +145,18 @@ spring:
                 - Path=/notice/**
               filters:
                 - RewritePath=/notice/(?<path>.*), /$\{path}
+            - id: lms-billing-service
+              uri: lb://lms-billing-service
+              predicates:
+                - Path=/billing/**
+              filters:
+                - RewritePath=/billing/(?<path>.*), /$\{path}
+            - id: lms-invoice-service
+              uri: lb://lms-invoice-service
+              predicates:
+                - Path=/invoice/**
+              filters:
+                - RewritePath=/invoice/(?<path>.*), /$\{path}
   main:
     allow-bean-definition-overriding: true
 
@@ -167,3 +184,7 @@ springdoc:
         url: /quiz/v3/api-docs
       - name: lms-notice-service
         url: /notice/v3/api-docs
+      - name: lms-billing-service
+        url: /billing/v3/api-docs
+      - name: lms-invoice-service
+        url: /invoice/v3/api-docs

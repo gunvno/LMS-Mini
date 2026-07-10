@@ -13,3 +13,14 @@ lesson:
   not_found: "Không tìm bài học"
 certificate:
   not_found: "Không tìm chứng chỉ"
+notice:
+  enrollment_success:
+    title: "Đăng ký khóa học thành công"
+    student_content: "Bạn đã đăng ký thành công khóa học “{0}”."
+  enrollment_created:
+    title: "Có học viên đăng ký khóa học"
+    content: "{0} vừa đăng ký khóa học “{1}”."
+mail:
+  enrollment:
+    subject: "EduFlow | Xác nhận đăng ký khóa học"
+    content: "Xin chào {0},\n\nBạn đã đăng ký thành công khóa học “{1}”. Bạn có thể truy cập khóa học ngay trên EduFlow để bắt đầu học.\n\nNếu đây không phải là thao tác của bạn, vui lòng liên hệ bộ phận hỗ trợ.\n\nTrân trọng,\nEduFlow"

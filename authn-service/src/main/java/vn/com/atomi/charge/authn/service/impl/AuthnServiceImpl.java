@@ -10,10 +10,12 @@ import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import vn.com.atomi.charge.authn.client.AuthorClient;
 import vn.com.atomi.charge.authn.model.entity.AuthnUserEntity;
 import vn.com.atomi.charge.authn.model.entity.RefreshTokenEntity;
 import vn.com.atomi.charge.authn.model.enums.AuthnUserStatus;
@@ -22,6 +24,7 @@ import vn.com.atomi.charge.authn.model.enums.RefreshTokenStatus;
 import vn.com.atomi.charge.authn.model.enums.UserLanguage;
 import vn.com.atomi.charge.authn.model.request.AuthenticationRequest;
 import vn.com.atomi.charge.authn.model.request.ChangePasswordRequest;
+import vn.com.atomi.charge.authn.model.request.ForgotPasswordResetRequest;
 import vn.com.atomi.charge.authn.model.request.IntrospectRequest;
 import vn.com.atomi.charge.authn.model.request.LogoutRequest;
 import vn.com.atomi.charge.authn.model.request.OtpVerifyRequest;
@@ -33,6 +36,7 @@ import vn.com.atomi.charge.authn.model.response.UserInfoResponse;
 import vn.com.atomi.charge.authn.repository.AuthnRepo;
 import vn.com.atomi.charge.authn.repository.AuthnUserRepository;
 import vn.com.atomi.charge.authn.service.interfaces.AuthnService;
+import vn.com.atomi.charge.authn.service.interfaces.MailService;
 import vn.com.atomi.charge.base.model.exception.BusinessException;
 
 import java.time.Duration;
@@ -45,14 +49,19 @@ import java.util.Set;
 import java.util.UUID;
 
 @Service
+@Slf4j
 public class AuthnServiceImpl implements AuthnService {
 
 	private static final String TOKEN_ISSUER = "lms.authn-service";
+	private static final Duration OTP_VALIDITY = Duration.ofMinutes(5);
+	private static final Duration REGISTRATION_VERIFIED_VALIDITY = Duration.ofMinutes(10);
 
 	private final AuthnUserRepository userRepository;
 	private final AuthnRepo refreshTokenRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final RedisTemplate<String, String> redisTemplate;
+	private final MailService mailService;
+	private final AuthorClient authorClient;
 
 	@Value("${jwt.signerKey}")
 	private String signerKey;
@@ -66,11 +75,15 @@ public class AuthnServiceImpl implements AuthnService {
 	public AuthnServiceImpl(AuthnUserRepository userRepository,
 							AuthnRepo refreshTokenRepository,
 							PasswordEncoder passwordEncoder,
-							RedisTemplate<String, String> redisTemplate) {
+							RedisTemplate<String, String> redisTemplate,
+							MailService mailService,
+							AuthorClient authorClient) {
 		this.userRepository = userRepository;
 		this.refreshTokenRepository = refreshTokenRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.redisTemplate = redisTemplate;
+		this.mailService = mailService;
+		this.authorClient = authorClient;
 	}
 
 	@Override
@@ -159,47 +172,135 @@ public class AuthnServiceImpl implements AuthnService {
 
 	@Override
 	public String register(RegistrationRequest request) {
-		if (userRepository.existsByUsername(request.getUsername())) {
-			throw new BusinessException("USER_EXISTED", "USER_EXISTED");
-		}
-		if (request.getEmail() != null && userRepository.existsByEmail(request.getEmail())) {
-			throw new BusinessException("EMAIL_EXISTED", "EMAIL_EXISTED");
+		String email = normalizeEmail(request.getEmail());
+		if (!Boolean.TRUE.equals(redisTemplate.hasKey(registrationVerifiedKey(email)))) {
+			throw new BusinessException("OTP_REQUIRED", "auth.otp_required");
 		}
 
-		AuthnUserEntity user = new AuthnUserEntity();
+		AuthnUserEntity user = userRepository.findByEmail(email).orElse(null);
+		if (user != null && user.getStatus() != AuthnUserStatus.INACTIVE) {
+			throw new BusinessException("EMAIL_EXISTED", "auth.email_existed");
+		}
+
+		AuthnUserEntity usernameOwner = userRepository.findByUsername(request.getUsername()).orElse(null);
+		if (usernameOwner != null && (user == null || !usernameOwner.getId().equals(user.getId()))) {
+			throw new BusinessException("USER_EXISTED", "auth.username_existed");
+		}
+		if (user == null) {
+			user = new AuthnUserEntity();
+			user.setCreatedBy("system");
+			user.setCreatedDate(LocalDateTime.now());
+		}
 		user.setUsername(request.getUsername());
 		user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-		user.setEmail(request.getEmail());
+		user.setEmail(email);
 		user.setPhone(request.getPhone());
 		user.setFullName(request.getFirstName() + " " + request.getLastName());
 		user.setLanguage(UserLanguage.VI);
 		user.setStatus(AuthnUserStatus.ACTIVE);
 		user.setFailedLoginAttempts(0);
-		user.setCreatedBy("system");
-		user.setCreatedDate(LocalDateTime.now());
-		userRepository.save(user);
-		return user.getId();
+		user.setLastModifiedBy(request.getUsername());
+		user.setLastModifiedDate(LocalDateTime.now());
+		AuthnUserEntity saved = userRepository.save(user);
+		redisTemplate.delete(registrationVerifiedKey(email));
+		assignStudentRole(saved.getId());
+		return saved.getId();
 	}
 
 	@Override
 	public void sendRegistrationOtp(String email) {
-		String otp = String.format("%06d", new Random().nextInt(900000) + 100000);
-		redisTemplate.opsForValue().set(otpKey(email), "REGISTER|" + otp, Duration.ofMinutes(5));
+		String normalizedEmail = normalizeEmail(email);
+		userRepository.findByEmail(normalizedEmail).ifPresent(user -> {
+			if (user.getStatus() != AuthnUserStatus.INACTIVE) {
+				throw new BusinessException("EMAIL_EXISTED", "auth.email_existed");
+			}
+		});
+		String otp = createOtp(normalizedEmail, "REGISTER");
+		try {
+			mailService.sendOtp(normalizedEmail, "EduFlow - Xác thực đăng ký", otp, "Xác thực đăng ký tài khoản");
+		} catch (RuntimeException exception) {
+			redisTemplate.delete(otpKey(normalizedEmail, "REGISTER"));
+			throw exception;
+		}
+	}
+
+	@Override
+	public void sendForgotPasswordOtp(String email) {
+		AuthnUserEntity user = userRepository.findByUsernameOrEmail(email, email)
+				.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND.getErrorCode(), "USER_NOT_FOUND"));
+		if (user.getStatus() == AuthnUserStatus.DELETED) {
+			throw new BusinessException(ErrorCode.USER_NOT_FOUND.getErrorCode(), "USER_NOT_FOUND");
+		}
+		String normalizedEmail = normalizeEmail(email);
+		String otp = createOtp(normalizedEmail, "RESET_PASSWORD");
+		try {
+			mailService.sendOtp(normalizedEmail, "EduFlow - Đặt lại mật khẩu", otp, "Đặt lại mật khẩu");
+		} catch (RuntimeException exception) {
+			redisTemplate.delete(otpKey(normalizedEmail, "RESET_PASSWORD"));
+			throw exception;
+		}
+	}
+
+	@Override
+	public void resetPassword(ForgotPasswordResetRequest request) {
+		if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+			throw new BusinessException(ErrorCode.INVALID_CONFIRM_PASSWORD.getErrorCode(), "INVALID_CONFIRM_PASSWORD");
+		}
+
+		if (!verifyOtpValue(request.getEmail(), request.getInputOtp(), "RESET_PASSWORD", true)) {
+			throw new BusinessException("OTP_INVALID", "auth.otp_invalid");
+		}
+
+		AuthnUserEntity user = userRepository.findByUsernameOrEmail(request.getEmail(), request.getEmail())
+				.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND.getErrorCode(), "USER_NOT_FOUND"));
+		user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+		user.setPasswordChangeAt(LocalDateTime.now());
+		user.setLastModifiedBy(user.getUsername());
+		user.setLastModifiedDate(LocalDateTime.now());
+		if (user.getStatus() == AuthnUserStatus.INACTIVE) {
+			user.setStatus(AuthnUserStatus.ACTIVE);
+		}
+		userRepository.save(user);
 	}
 
 	@Override
 	public boolean verifyOtp(OtpVerifyRequest request) {
-		String cached = redisTemplate.opsForValue().get(otpKey(request.getEmail()));
+		boolean matched = verifyOtpValue(request.getEmail(), request.getInputOtp(), request.getExpectedType(), true);
+		if (!matched) {
+			throw new BusinessException("OTP_INVALID", "auth.otp_invalid");
+		}
+		if ("REGISTER".equals(request.getExpectedType())) {
+			redisTemplate.opsForValue().set(
+					registrationVerifiedKey(normalizeEmail(request.getEmail())),
+					"true",
+					REGISTRATION_VERIFIED_VALIDITY);
+		}
+		return true;
+	}
+
+	private void assignStudentRole(String userId) {
+		try {
+			authorClient.assignStudentRole(userId);
+		} catch (Exception ex) {
+			log.warn("Could not assign STUDENT role for userId={}", userId, ex);
+		}
+	}
+
+	private String createOtp(String email, String purpose) {
+		String otp = String.format("%06d", new Random().nextInt(900000) + 100000);
+		redisTemplate.opsForValue().set(otpKey(email, purpose), otp, OTP_VALIDITY);
+		return otp;
+	}
+
+	private boolean verifyOtpValue(String email, String inputOtp, String expectedType, boolean deleteOnMatch) {
+		String key = otpKey(email, expectedType);
+		String cached = redisTemplate.opsForValue().get(key);
 		if (cached == null) {
 			return false;
 		}
-		String[] parts = cached.split("\\|", 2);
-		if (parts.length != 2 || !parts[0].equals(request.getExpectedType())) {
-			return false;
-		}
-		boolean matched = parts[1].equals(request.getInputOtp());
-		if (matched) {
-			redisTemplate.delete(otpKey(request.getEmail()));
+		boolean matched = cached.equals(inputOtp);
+		if (matched && deleteOnMatch) {
+			redisTemplate.delete(key);
 		}
 		return matched;
 	}
@@ -287,8 +388,16 @@ public class AuthnServiceImpl implements AuthnService {
 		return token != null && token.startsWith("Bearer ") ? token.substring(7) : token;
 	}
 
-	private String otpKey(String email) {
-		return "otp:" + email;
+	private String otpKey(String email, String purpose) {
+		return "otp:" + purpose + ":" + normalizeEmail(email);
+	}
+
+	private String registrationVerifiedKey(String email) {
+		return "otp:REGISTER_VERIFIED:" + normalizeEmail(email);
+	}
+
+	private String normalizeEmail(String email) {
+		return email == null ? "" : email.trim().toLowerCase();
 	}
 
 	private String extractFirstName(String fullName) {

@@ -18,13 +18,13 @@ services:
       SPRING_DATA_REDIS_HOST: host.docker.internal
       SPRING_DATA_REDIS_PORT: 6379
       CONFIG_MINIO_URL: http://host.docker.internal:9000
-      CONFIG_MINIO_ACCESS_KEY: minioadmin
-      CONFIG_MINIO_SECRET_KEY: minioadmin
+      CONFIG_MINIO_ACCESS_KEY: ${CONFIG_MINIO_ACCESS_KEY:-minioadmin}
+      CONFIG_MINIO_SECRET_KEY: ${CONFIG_MINIO_SECRET_KEY:-minioadmin}
       CONFIG_MINIO_BUCKET: lms-mini
-      SPRING_MAIL_HOST: smtp.gmail.com
-      SPRING_MAIL_PORT: 587
-      SPRING_MAIL_USERNAME: longta2004.vtv3@gmail.com
-      SPRING_MAIL_PASSWORD: irnyjvkkgsnmcfyk
+      SPRING_MAIL_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SPRING_MAIL_PORT: ${SMTP_PORT:-587}
+      SPRING_MAIL_USERNAME: ${SMTP_USERNAME:-longta2004.vtv3@gmail.com}
+      SPRING_MAIL_PASSWORD: ${SMTP_APP_PASSWORD:?Set SMTP_APP_PASSWORD in .env}
     ports:
       - 8086:8086
     volumes:

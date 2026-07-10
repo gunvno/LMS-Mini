@@ -45,8 +45,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: longta2004.vtv3@gmail.com
-    password: irnyjvkkgsnmcfyk
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -66,7 +66,7 @@ config:
     web: WEB
   security:
     jwt:
-      secret-key: 3cfa76ef14937c1c0ea519f8fc057a80fcd04a7420f8e8bcd0a7567c272e007b
+      secret-key: ${JWT_SIGNER_KEY:}
       expiration-time: 86400000
       public-key: "-----BEGIN PUBLIC KEY-----
         MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAjmxokHdnQJ4/BoC+T6ZD
@@ -116,8 +116,8 @@ config:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: longta2004.vtv3@gmail.com
-    password: irnyjvkkgsnmcfyk
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
     smtp:
       auth: true
       starttls-enable: true

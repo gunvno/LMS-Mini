@@ -140,6 +140,11 @@ public class AuthorController {
 		return authorService.getUsersByRole(roleCode);
 	}
 
+	@PostMapping("/internal/v1/users/{userId}/roles/student")
+	public BaseResponse<RoleDto> assignStudentRole(@PathVariable String userId) {
+		return authorService.assignStudentRole(userId);
+	}
+
 	@GetMapping("/staff-activity/me")
 	@PreAuthorize("hasAuthority('STAFF_ACTIVITY_VIEW')")
 	public BaseResponse<StaffActivityDto> getMyStaffActivity() {

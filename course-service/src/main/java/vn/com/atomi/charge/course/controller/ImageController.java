@@ -80,7 +80,6 @@ public class ImageController extends BaseController<ImageService, ImageDto> {
     }
 
     @GetMapping(value = "/{id}/view")
-    @PreAuthorize("hasAuthority('IMAGE_VIEW')")
     public ResponseEntity<byte[]> viewImage(@PathVariable String id) {
         return service.viewImage(id, false);
     }

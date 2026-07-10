@@ -12,6 +12,8 @@ common:
   not_found: "Data not found"
   invalid_input: "Please check the input information"
   max_file_size_exceed: "Maximum file size: 5MB"
+  operation_failed: "We could not complete your request. Please try again later"
+  method_not_allowed: "The request method is not supported"
 
 # =========================
 # Validation
@@ -23,6 +25,7 @@ validation:
   max_length: "{0} must not exceed {1} characters"
   email_invalid: "Invalid email address"
   phone_invalid: "Invalid phone number"
+  invalid_request: "The submitted data is invalid"
 
 # =========================
 # User Management
@@ -71,6 +74,25 @@ order:
   canceled: "Order canceled successfully"
   payment_failed: "Payment failed"
   payment_success: "Payment successful"
+
+# =========================
+# Payment / Billing
+# =========================
+payment:
+  not_found: "Payment transaction not found"
+  amount_invalid: "Invalid payment amount"
+  enrollment_pending: "Course enrollment is pending"
+
+invoice:
+  not_found: "Invoice not found"
+  invalid_request: "Invalid invoice request"
+
+payos:
+  not_configured: "Payment gateway is not configured"
+  create_failed: "Unable to create payment link"
+  payment_lookup_failed: "Unable to look up payment transaction"
+  payment_not_found: "PayOS transaction not found"
+  sign_failed: "Unable to create payment signature"
 
 # =========================
 # Security & Auth

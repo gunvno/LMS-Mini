@@ -15,6 +15,8 @@ Hệ thống hiện có các service chính:
 | learning-service | `/learning` | Enrollment, tiến độ học, chứng chỉ |
 | quiz-service | `/quiz` | Quiz, câu hỏi, đáp án, attempt |
 | notice-service | `/notice` | Entity thông báo đã có, controller public chưa hoàn thiện |
+| billing-service | `/billing` | Thanh toán khóa học qua PayOS, lưu giao dịch, webhook paid và auto enroll |
+| invoice-service | `/invoice` | Hóa đơn và lịch sử hóa đơn |
 
 Frontend nên chỉ gọi qua API Gateway, không gọi trực tiếp port service.
 
@@ -113,6 +115,7 @@ Không truyền `userId` cho các màn hình của user hiện tại. Các API d
 | Learning | `LEARNING_PROGRESS_VIEW`, `LEARNING_PROGRESS_UPDATE` |
 | Quiz | `QUIZ_VIEW`, `QUIZ_MANAGE`, `QUESTION_MANAGE`, `ANSWER_MANAGE`, `QUIZ_ATTEMPT` |
 | Certificate | `CERTIFICATE_VIEW`, `CERTIFICATE_MANAGE`, `CERTIFICATE_VERIFY` |
+| Payment | `PAYMENT_VIEW`, `PAYMENT_CREATE`, `PAYMENT_MANAGE` |
 | Notice/Device | `NOTICE_VIEW`, `NOTICE_SEND`, `DEVICE_MANAGE` |
 
 ### 3.3 Render Theo Permission
@@ -148,6 +151,8 @@ GET /author/api/v1/users/me/roles
 | `/student/courses/:courseId/learn` | `LESSON_VIEW`, `LEARNING_PROGRESS_UPDATE` | Trình học bài |
 | `/student/quizzes/:quizId/attempt` | `QUIZ_ATTEMPT` | Làm quiz |
 | `/student/certificates` | `CERTIFICATE_VIEW` | Chứng chỉ của tôi |
+| `/payment/success` | `PAYMENT_VIEW` | Kết quả thanh toán thành công |
+| `/payment/cancel` | `PAYMENT_VIEW` | Thanh toán bị hủy |
 | `/profile` | `USER_PROFILE_VIEW` | Hồ sơ hiện tại |
 | `/change-password` | `USER_PASSWORD_CHANGE` | Đổi mật khẩu |
 
@@ -642,6 +647,49 @@ UI khi lỗi:
 | lesson không tồn tại | Toast: Bài học không tồn tại |
 | chưa start mà complete | Toast: Cần bắt đầu bài học trước |
 | quiz bắt buộc chưa pass | Điều hướng tới quiz bắt buộc |
+
+## 12.4 Payment Module
+
+### API
+
+| Chức năng | Method | Gateway API | Permission |
+|---|---:|---|---|
+| Tạo thanh toán khóa học | POST | `/billing/api/v1/course-payments` | `PAYMENT_CREATE` |
+| Thanh toán của tôi | GET | `/billing/api/v1/payments/me` | `PAYMENT_VIEW` |
+| Lịch sử giao dịch | GET | `/billing/api/v1/payments/history/me` | `PAYMENT_VIEW` |
+| Chi tiết payment | GET | `/billing/api/v1/payments/{id}` | `PAYMENT_VIEW` |
+| PayOS webhook | POST | `/billing/api/v1/payments/payos/webhook` | public, verify checksum |
+
+## 12.5 Invoice Module
+
+| Chức năng | Method | Gateway API | Permission |
+|---|---:|---|---|
+| Hóa đơn của tôi | GET | `/invoice/api/v1/invoices/me` | `PAYMENT_VIEW` |
+| Chi tiết hóa đơn | GET | `/invoice/api/v1/invoices/{invoiceCode}` | `PAYMENT_VIEW` |
+| Admin xem hóa đơn | GET | `/invoice/api/v1/admin/invoices` | `PAYMENT_VIEW` |
+| Billing tạo hóa đơn nội bộ | POST | `/api/v1/internal/invoices` | internal service key |
+
+Create payment body:
+
+```json
+{
+  "data": {
+    "courseId": "course-id"
+  },
+  "channel": "WEB",
+  "signature": ""
+}
+```
+
+Flow:
+
+1. Student bấm đăng ký khóa học trả phí.
+2. Frontend gọi `/billing/api/v1/course-payments`.
+3. Backend tạo payment `PENDING`, gọi PayOS và trả `providerCheckoutUrl`.
+4. Frontend redirect sang `providerCheckoutUrl`.
+5. PayOS thanh toán xong gọi webhook `/billing/api/v1/payments/payos/webhook`.
+6. Billing-service verify checksum, đổi payment thành `PAID`, gọi invoice-service tạo hóa đơn, rồi gọi learning-service internal để auto enroll course.
+7. PayOS redirect về `/payment/success`, frontend gọi lại `/learning/api/v1/my-courses` để kiểm tra course đã vào danh sách học.
 
 ## 13. Quiz Module
 
@@ -1141,7 +1189,18 @@ Mọi list page nên có:
 | yes | `POST /quiz/api/v1/quizzes/{id}/attempts` | start attempt |
 | yes | `POST /quiz/api/v1/quiz-attempts/{id}/submit` | submit attempt |
 
-### 20.5 Notice
+### 20.5 Payment and Invoice
+
+| Done backend | API | UI dùng cho |
+|---|---|---|
+| yes | `POST /billing/api/v1/course-payments` | tạo link PayOS để mua khóa học |
+| yes | `GET /billing/api/v1/payments/me` | danh sách giao dịch của tôi |
+| yes | `GET /billing/api/v1/payments/history/me` | lịch sử giao dịch của tôi |
+| yes | `GET /invoice/api/v1/invoices/me` | hóa đơn của tôi |
+| yes | `GET /invoice/api/v1/admin/invoices` | admin xem toàn bộ hóa đơn |
+| yes | `POST /billing/api/v1/payments/payos/webhook` | PayOS callback, gọi invoice-service và auto enroll |
+
+### 20.6 Notice
 
 | Done backend | API | UI dùng cho |
 |---|---|---|

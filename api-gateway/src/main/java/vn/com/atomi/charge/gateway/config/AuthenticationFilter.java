@@ -50,7 +50,7 @@ public class AuthenticationFilter implements WebFilter {
   @Autowired
   AuthorClient authorClient;
 
-  @Value("${spring.profiles.active}")
+  @Value("${spring.profiles.active:default}")
   private String profile;
 
   ObjectMapper mapper = new ObjectMapper();

@@ -19,4 +19,6 @@ public interface CourseRepository extends BaseRepository<CourseEntity, String> {
     Optional<CourseEntity> findByIdAndStatusAndDeletedAtIsNull(String id, CourseStatus status);
 
     Page<CourseEntity> findByStatusAndDeletedAtIsNull(CourseStatus status, Pageable pageable);
+
+    Page<CourseEntity> findByInstructorIdAndDeletedAtIsNull(String instructorId, Pageable pageable);
 }

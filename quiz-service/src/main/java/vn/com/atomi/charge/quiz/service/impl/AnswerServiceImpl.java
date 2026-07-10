@@ -15,9 +15,11 @@ import vn.com.atomi.charge.quiz.model.entity.AnswerEntity;
 import vn.com.atomi.charge.quiz.model.entity.QuestionEntity;
 import vn.com.atomi.charge.quiz.repository.AnswerRepository;
 import vn.com.atomi.charge.quiz.repository.QuestionRepository;
+import vn.com.atomi.charge.quiz.repository.QuizRepository;
 import vn.com.atomi.charge.quiz.service.interfaces.AnswerService;
 
 import java.util.Locale;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -25,6 +27,10 @@ public class AnswerServiceImpl extends BaseService<AnswerRepository, AnswerDto, 
 implements AnswerService {
     @Autowired
     private QuestionRepository questionRepository;
+    @Autowired
+    private QuizRepository quizRepository;
+    @Autowired
+    private QuizOwnershipService ownershipService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -44,6 +50,7 @@ implements AnswerService {
             if(optionalQuestion.isEmpty()){
                 return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("question.not_found"));
             }
+            assertCanManageQuestion(optionalQuestion.get());
 
             AnswerEntity saved = (AnswerEntity) repository.save(mapper.toEntity(dto.getData()));
             response.setStatus(HttpStatus.OK);
@@ -76,5 +83,47 @@ implements AnswerService {
             content,
             dto.getId()
         );
+    }
+
+    @Override
+    public BaseResponse<AnswerDto> update(BaseRequest<AnswerDto> request) {
+        AnswerEntity answer = repository.findEntityById(request.getData().getId())
+                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied"));
+        assertCanManageAnswer(answer);
+        if (request.getData().getQuestionId() != null) {
+            QuestionEntity targetQuestion = questionRepository.findEntityById(request.getData().getQuestionId())
+                    .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied"));
+            assertCanManageQuestion(targetQuestion);
+        }
+        return super.update(request);
+    }
+
+    @Override
+    public BaseResponse<AnswerDto> delete(String id) {
+        AnswerEntity answer = repository.findEntityById(id)
+                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied"));
+        assertCanManageAnswer(answer);
+        return super.delete(id);
+    }
+
+    @Override
+    public BaseResponse<AnswerDto> delete(List<String> ids) {
+        ids.stream()
+                .map(id -> repository.findEntityById(id)
+                        .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied")))
+                .forEach(this::assertCanManageAnswer);
+        return super.delete(ids);
+    }
+
+    private void assertCanManageAnswer(AnswerEntity answer) {
+        QuestionEntity question = questionRepository.findEntityById(answer.getQuestionId())
+                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied"));
+        assertCanManageQuestion(question);
+    }
+
+    private void assertCanManageQuestion(QuestionEntity question) {
+        vn.com.atomi.charge.quiz.model.entity.QuizEntity quiz = quizRepository.findEntityById(question.getQuizId())
+                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied"));
+        ownershipService.assertCanManageCourse(quiz.getCourseId());
     }
 }

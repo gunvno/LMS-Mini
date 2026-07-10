@@ -14,5 +14,7 @@ public interface AuthnUserRepository extends BaseRepository<AuthnUserEntity, Str
 
 	Optional<AuthnUserEntity> findByUsername(String username);
 
+	Optional<AuthnUserEntity> findByEmail(String email);
+
 	Optional<AuthnUserEntity> findByUsernameOrEmail(String username, String email);
 }

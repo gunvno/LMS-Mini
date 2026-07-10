@@ -8,6 +8,76 @@ CREATE DATABASE IF NOT EXISTS lms_course_service CHARACTER SET utf8mb4 COLLATE u
 CREATE DATABASE IF NOT EXISTS lms_learning_service CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE DATABASE IF NOT EXISTS lms_quiz_service CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE DATABASE IF NOT EXISTS lms_notice_service CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS lms_billing_service CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS lms_invoice_service CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- =========================================================
+-- billing-service
+-- =========================================================
+USE lms_billing_service;
+
+CREATE TABLE IF NOT EXISTS tbl_payments (
+    id VARCHAR(36) PRIMARY KEY,
+    version BIGINT NOT NULL DEFAULT 0,
+    created_by VARCHAR(50),
+    created_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_modified_by VARCHAR(50),
+    last_modified_date DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+
+    user_id VARCHAR(36) NOT NULL,
+    course_id VARCHAR(36) NOT NULL,
+    amount DECIMAL(18, 2) NOT NULL,
+    provider VARCHAR(30) NOT NULL,
+    provider_order_code BIGINT UNIQUE,
+    provider_payment_link_id VARCHAR(150),
+    provider_checkout_url VARCHAR(500),
+    provider_qr_code TEXT,
+    transfer_content VARCHAR(100),
+    provider_transaction_id VARCHAR(150),
+    invoice_code VARCHAR(50) UNIQUE,
+    invoice_issued_at DATETIME NULL,
+    status VARCHAR(30) NOT NULL,
+    paid_at DATETIME NULL,
+    raw_webhook TEXT,
+
+    KEY idx_payments_user_id (user_id),
+    KEY idx_payments_course_id (course_id),
+    KEY idx_payments_user_course_status (user_id, course_id, status),
+    KEY idx_payments_status (status),
+    KEY idx_payments_paid_at (paid_at),
+    KEY idx_payments_deleted_at (deleted_at)
+);
+
+-- =========================================================
+-- invoice-service
+-- =========================================================
+USE lms_invoice_service;
+
+CREATE TABLE IF NOT EXISTS tbl_invoices (
+    id VARCHAR(36) PRIMARY KEY,
+    version BIGINT NOT NULL DEFAULT 0,
+    created_by VARCHAR(50),
+    created_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_modified_by VARCHAR(50),
+    last_modified_date DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+    payment_id VARCHAR(36) NOT NULL UNIQUE,
+    invoice_code VARCHAR(50) NOT NULL UNIQUE,
+    user_id VARCHAR(36) NOT NULL,
+    course_id VARCHAR(36) NOT NULL,
+    amount DECIMAL(18, 2) NOT NULL,
+    provider VARCHAR(30) NOT NULL,
+    provider_transaction_id VARCHAR(150),
+    status VARCHAR(30) NOT NULL,
+    issued_at DATETIME NOT NULL,
+    paid_at DATETIME NULL,
+    KEY idx_invoices_user_id (user_id),
+    KEY idx_invoices_course_id (course_id),
+    KEY idx_invoices_status (status),
+    KEY idx_invoices_issued_at (issued_at),
+    KEY idx_invoices_deleted_at (deleted_at)
+);
 
 -- =========================================================
 -- authn-service

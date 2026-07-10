@@ -1,6 +1,7 @@
 package vn.com.atomi.charge.learning.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -27,6 +28,10 @@ import vn.com.atomi.charge.learning.model.enums.EnrollmentStatus;
 import vn.com.atomi.charge.learning.model.enums.LearningProgressStatus;
 import vn.com.atomi.charge.learning.repository.CertificateRepository;
 import vn.com.atomi.charge.learning.repository.Client.AuthnClient;
+import vn.com.atomi.charge.learning.repository.Client.NoticeClient;
+import vn.com.atomi.charge.learning.model.dto.CourseNotificationDto;
+import vn.com.atomi.charge.learning.model.request.NoticeRequest;
+import vn.com.atomi.charge.learning.model.request.InternalMailRequest;
 import vn.com.atomi.charge.learning.repository.Client.CourseClient;
 import vn.com.atomi.charge.learning.repository.Client.QuizClient;
 import vn.com.atomi.charge.learning.repository.EnrollmentRepository;
@@ -41,6 +46,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class EnrollmentServiceImpl extends BaseService<EnrollmentRepository,
         EnrollmentDto, EnrollmentEntity, EnrollmentMapper> implements EnrollmentService {
 
@@ -49,6 +55,7 @@ public class EnrollmentServiceImpl extends BaseService<EnrollmentRepository,
     private final LearningProgressRepository learningProgressRepository;
     private final CertificateRepository certificateRepository;
     private final QuizClient quizClient;
+    private final NoticeClient noticeClient;
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BaseResponse<EnrollmentDto> enrollCourse(BaseRequest<EnrollmentDto> dto, String courseId){
@@ -88,25 +95,10 @@ public class EnrollmentServiceImpl extends BaseService<EnrollmentRepository,
             dto.getData().setCompletedAt(null);
             dto.getData().setProgressPercent(0.0);
             dto.getData().setStatus(EnrollmentStatus.ACTIVE);
-            EnrollmentEntity saved = repository.save(mapper.toEntity(dto.getData()));
+            EnrollmentEntity saved = createEnrollmentWithProgress(userId, courseId);
+            notifyEnrollment(saved, userId, courseId);
             response.setStatus(HttpStatus.OK);
             response.setData(mapper.toDto(saved));
-            String enrollmentId = saved.getId();
-            List<LessonDto> lessons = courseClient.getLessonByCourseId(courseId);
-            List<LearningProgressEntity> progresses = new ArrayList<>();
-
-            for (LessonDto lesson : lessons) {
-                LearningProgressEntity progress = new LearningProgressEntity();
-                progress.setEnrollmentId(enrollmentId);
-                progress.setLessonId(lesson.getId());
-                progress.setStatus(LearningProgressStatus.NOT_STARTED);
-                progress.setStartedAt(null);
-                progress.setCompletedAt(null);
-
-                progresses.add(progress);
-            }
-
-            learningProgressRepository.saveAll(progresses);
         } catch (Exception ex) {
             response.setStatus(HttpStatus.BAD_REQUEST);
             response.setErrorCode(BaseErrorCode.FAILURE.getErrorCode());
@@ -115,6 +107,125 @@ public class EnrollmentServiceImpl extends BaseService<EnrollmentRepository,
 
 
         return response;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BaseResponse<EnrollmentDto> enrollCourseForUser(String userId, String courseId) {
+        response = new BaseResponse<>();
+        try {
+            if (userId == null || userId.isBlank()) {
+                return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("user.not_found"));
+            }
+            if (courseId == null || courseId.isBlank()) {
+                return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("course.not_found"));
+            }
+            if (!Boolean.TRUE.equals(authnClient.checkUser(userId))) {
+                return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("user.not_found"));
+            }
+
+            Optional<EnrollmentEntity> existing =
+                    repository.findByUserIdAndCourseIdAndDeletedAtIsNull(userId, courseId);
+            if (existing.isPresent()) {
+                response.setStatus(HttpStatus.OK);
+                response.setData(mapper.toDto(existing.get()));
+                return response;
+            }
+
+            Boolean courseExists = courseClient.existsPublishedCourseById(courseId);
+            if (!Boolean.TRUE.equals(courseExists)) {
+                return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("course.not_found"));
+            }
+
+            EnrollmentEntity saved = createEnrollmentWithProgress(userId, courseId);
+            notifyEnrollment(saved, userId, courseId);
+
+            response.setStatus(HttpStatus.OK);
+            response.setData(mapper.toDto(saved));
+        } catch (Exception ex) {
+            response.setStatus(HttpStatus.BAD_REQUEST);
+            response.setErrorCode(BaseErrorCode.FAILURE.getErrorCode());
+            response.setMessage(StringUtil.beautyError(ex));
+        }
+        return response;
+    }
+
+    private EnrollmentEntity createEnrollmentWithProgress(String userId, String courseId) {
+        EnrollmentEntity enrollment = new EnrollmentEntity();
+        enrollment.setUserId(userId);
+        enrollment.setCourseId(courseId);
+        enrollment.setEnrolledAt(LocalDateTime.now());
+        enrollment.setCompletedAt(null);
+        enrollment.setProgressPercent(0.0);
+        enrollment.setStatus(EnrollmentStatus.ACTIVE);
+        EnrollmentEntity saved = repository.save(enrollment);
+
+        List<LearningProgressEntity> progresses = new ArrayList<>();
+        List<LessonDto> lessons = courseClient.getLessonByCourseId(courseId);
+        if (lessons != null) {
+            for (LessonDto lesson : lessons) {
+                LearningProgressEntity progress = new LearningProgressEntity();
+                progress.setEnrollmentId(saved.getId());
+                progress.setLessonId(lesson.getId());
+                progress.setStatus(LearningProgressStatus.NOT_STARTED);
+                progress.setStartedAt(null);
+                progress.setCompletedAt(null);
+                progresses.add(progress);
+            }
+            learningProgressRepository.saveAll(progresses);
+        }
+        return saved;
+    }
+
+    private void notifyEnrollment(EnrollmentEntity enrollment, String userId, String courseId) {
+        try {
+            CourseNotificationDto course = courseClient.getCourse(courseId).getData();
+            AuthnUserDto student = authnClient.getUserById(userId).getData();
+            String courseName = course == null || course.getName() == null ? courseId : course.getName();
+            String studentName = student == null || student.getFullName() == null ? userId : student.getFullName();
+
+            sendUserNotice(userId, i18n.getMessage("notice.enrollment_success.title"),
+                    i18n.getMessage("notice.enrollment_success.student_content", new Object[]{courseName}), courseId);
+            if (course != null && course.getInstructorId() != null && !course.getInstructorId().equals(userId)) {
+                sendUserNotice(course.getInstructorId(), i18n.getMessage("notice.enrollment_created.title"),
+                        i18n.getMessage("notice.enrollment_created.content", new Object[]{studentName, courseName}), courseId);
+            }
+            NoticeRequest adminNotice = notice("ADMIN", i18n.getMessage("notice.enrollment_created.title"),
+                    i18n.getMessage("notice.enrollment_created.content", new Object[]{studentName, courseName}), courseId);
+            noticeClient.sendRole(wrap(adminNotice));
+
+            if (student != null && student.getEmail() != null) {
+                InternalMailRequest mail = new InternalMailRequest();
+                mail.setEmail(student.getEmail());
+                mail.setSubject(i18n.getMessage("mail.enrollment.subject"));
+                mail.setContent(i18n.getMessage("mail.enrollment.content", new Object[]{studentName, courseName}));
+                authnClient.sendMail(mail);
+            }
+        } catch (Exception ex) {
+            log.warn("Enrollment {} created but notification delivery failed: {}", enrollment.getId(), ex.getMessage());
+        }
+    }
+
+    private void sendUserNotice(String userId, String title, String content, String courseId) {
+        NoticeRequest request = notice(null, title, content, courseId);
+        request.setUserId(userId);
+        noticeClient.sendUser(wrap(request));
+    }
+
+    private NoticeRequest notice(String roleCode, String title, String content, String courseId) {
+        NoticeRequest request = new NoticeRequest();
+        request.setRoleCode(roleCode);
+        request.setTitle(title);
+        request.setContent(content);
+        request.setNoticeType("ENROLLMENT_SUCCESS");
+        request.setData(courseId);
+        return request;
+    }
+
+    private BaseRequest<NoticeRequest> wrap(NoticeRequest data) {
+        BaseRequest<NoticeRequest> request = new BaseRequest<>();
+        request.setData(data);
+        return request;
     }
 
     private String currentUserId() {

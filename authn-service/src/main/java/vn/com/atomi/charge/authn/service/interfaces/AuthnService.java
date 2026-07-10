@@ -2,6 +2,7 @@ package vn.com.atomi.charge.authn.service.interfaces;
 
 import vn.com.atomi.charge.authn.model.request.AuthenticationRequest;
 import vn.com.atomi.charge.authn.model.request.ChangePasswordRequest;
+import vn.com.atomi.charge.authn.model.request.ForgotPasswordResetRequest;
 import vn.com.atomi.charge.authn.model.request.IntrospectRequest;
 import vn.com.atomi.charge.authn.model.request.LogoutRequest;
 import vn.com.atomi.charge.authn.model.request.OtpRegisterRequest;
@@ -26,6 +27,10 @@ public interface AuthnService {
 	String register(RegistrationRequest request);
 
 	void sendRegistrationOtp(String email);
+
+	void sendForgotPasswordOtp(String email);
+
+	void resetPassword(ForgotPasswordResetRequest request);
 
 	boolean verifyOtp(OtpVerifyRequest request);
 

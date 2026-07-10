@@ -19,6 +19,7 @@ public interface CourseService
     BaseResponse<CourseDto> archiveCourse(String id);
     Boolean checkCourse(String courseId);
     Boolean checkPublishedCourse(String courseId);
+    Boolean isInstructorOwner(String courseId, String userId);
     BaseResponse<Page<CourseDto>> getPublishedCourses(Pageable pageable);
     BaseResponse<CourseDto> getPublishedCourseDetails(String id);
 }

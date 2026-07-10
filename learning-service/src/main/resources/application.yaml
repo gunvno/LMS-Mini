@@ -76,6 +76,6 @@ config:
         issue-certificate: ${config.api.prefix.internal}/${config.api.version}/certificates/issue
   minio:
     url: http://localhost:9000
-    access-key: minioadmin
-    secret-key: minioadmin
+    access-key: ${CONFIG_MINIO_ACCESS_KEY:minioadmin}
+    secret-key: ${CONFIG_MINIO_SECRET_KEY:minioadmin}
     bucket: lms-mini

@@ -17,9 +17,10 @@ public class LoggingFilter implements GlobalFilter, Ordered {
   public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
     long start = System.currentTimeMillis();
     var request = exchange.getRequest();
-    log.info("=>>> INCOMING REQUEST: {} {} | query={} | headers={}",
+    // Do not log raw query values or headers: they can contain tokens, cookies, passwords and OTPs.
+    log.info("=>>> INCOMING REQUEST: {} {} | queryKeys={} | headerNames={}",
         request.getMethod(), request.getURI().getRawPath(),
-        request.getQueryParams(), request.getHeaders());
+        request.getQueryParams().keySet(), request.getHeaders().keySet());
     return chain.filter(exchange).then(Mono.fromRunnable(() -> {
       long end = System.currentTimeMillis();
       long callTime = end - start;

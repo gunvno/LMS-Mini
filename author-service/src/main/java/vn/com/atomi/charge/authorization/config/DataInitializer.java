@@ -80,8 +80,12 @@ public class DataInitializer implements ApplicationRunner {
             "CERTIFICATE_VIEW",
             "CERTIFICATE_MANAGE",
             "CERTIFICATE_VERIFY",
+            "PAYMENT_VIEW",
+            "PAYMENT_CREATE",
+            "PAYMENT_MANAGE",
             "NOTICE_VIEW",
             "NOTICE_SEND",
+            "NOTICE_BROADCAST",
             "DEVICE_MANAGE"
     );
 
@@ -104,6 +108,7 @@ public class DataInitializer implements ApplicationRunner {
             "ANSWER_MANAGE",
             "QUIZ_ATTEMPT",
             "CERTIFICATE_VIEW",
+            "PAYMENT_VIEW",
             "NOTICE_VIEW",
             "NOTICE_SEND",
             "STAFF_ACTIVITY_VIEW",
@@ -125,6 +130,8 @@ public class DataInitializer implements ApplicationRunner {
             "QUIZ_ATTEMPT",
             "CERTIFICATE_VIEW",
             "CERTIFICATE_VERIFY",
+            "PAYMENT_VIEW",
+            "PAYMENT_CREATE",
             "USER_PROFILE_VIEW",
             "USER_PASSWORD_CHANGE",
             "NOTICE_VIEW",
@@ -171,8 +178,12 @@ public class DataInitializer implements ApplicationRunner {
         permission("CERTIFICATE_VIEW", "Certificate View", "View certificates");
         permission("CERTIFICATE_MANAGE", "Certificate Manage", "Manage certificates");
         permission("CERTIFICATE_VERIFY", "Certificate Verify", "Verify certificates by code");
+        permission("PAYMENT_VIEW", "Payment View", "View payments");
+        permission("PAYMENT_CREATE", "Payment Create", "Create payment requests");
+        permission("PAYMENT_MANAGE", "Payment Manage", "Manage payments");
         permission("NOTICE_VIEW", "Notice View", "View notices");
         permission("NOTICE_SEND", "Notice Send", "Send notices");
+        permission("NOTICE_BROADCAST", "Notice Broadcast", "Send role and system-wide notices");
         permission("DEVICE_MANAGE", "Device Manage", "Register/deactivate user devices");
     }
 

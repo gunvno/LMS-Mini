@@ -44,6 +44,7 @@ public class SecurityConfig {
             "/auth/logout",
             "/auth/otp-register",
             "/auth/otp-verify",
+            "/auth/forgot-password/**",
             "/api/v1/auth/**",
             "/api/v1/auth/register",
             "/api/v1/auth/login",
@@ -57,10 +58,13 @@ public class SecurityConfig {
             "/authn/api/v1/auth/refresh-token",
             "/authn/api/v1/auth/otp-register",
             "/authn/api/v1/auth/otp-verify",
+            "/authn/api/v1/auth/forgot-password/**",
             "/authn/api/v1/.well-known/jwks.json",
             "/course/api/v1/courses/published",
             "/course/api/v1/courses/*/published",
-            "/course/api/v1/courses/*/images/primary/view"
+            "/course/api/v1/courses/*/images/primary/view",
+            "/billing/api/v1/payments/payos",
+            "/billing/api/v1/payments/payos/webhook"
     };
 
     @Bean

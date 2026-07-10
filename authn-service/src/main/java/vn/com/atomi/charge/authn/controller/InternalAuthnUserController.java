@@ -11,7 +11,9 @@ import vn.com.atomi.charge.authn.model.dto.AuthnUserDto;
 import vn.com.atomi.charge.authn.model.request.InternalCreateUserRequest;
 import vn.com.atomi.charge.authn.model.request.InternalResetPasswordRequest;
 import vn.com.atomi.charge.authn.model.request.InternalUpdateUserStatusRequest;
+import vn.com.atomi.charge.authn.model.request.InternalMailRequest;
 import vn.com.atomi.charge.authn.service.interfaces.AuthnUserService;
+import vn.com.atomi.charge.authn.service.interfaces.MailService;
 import vn.com.atomi.charge.base.model.response.BaseResponse;
 
 import java.util.List;
@@ -21,9 +23,11 @@ import java.util.List;
 public class InternalAuthnUserController {
 
     private final AuthnUserService authnUserService;
+    private final MailService mailService;
 
-    public InternalAuthnUserController(AuthnUserService authnUserService) {
+    public InternalAuthnUserController(AuthnUserService authnUserService, MailService mailService) {
         this.authnUserService = authnUserService;
+        this.mailService = mailService;
     }
 
     @PostMapping("/{id}/check")
@@ -34,6 +38,12 @@ public class InternalAuthnUserController {
     @GetMapping("/{userId}/info")
     public BaseResponse<AuthnUserDto> getUserById(@PathVariable String userId) {
         return authnUserService.getUserById(userId);
+    }
+
+    @PostMapping("/mail")
+    public BaseResponse<Void> sendMail(@RequestBody @Valid InternalMailRequest request) {
+        mailService.send(request.getEmail(), request.getSubject(), request.getContent());
+        return BaseResponse.success(org.springframework.http.HttpStatus.OK, null);
     }
 
     @GetMapping("/username/{username}/info")

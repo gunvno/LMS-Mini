@@ -16,7 +16,6 @@ import vn.com.atomi.charge.learning.model.entity.CertificateEntity;
 import vn.com.atomi.charge.learning.repository.CertificateRepository;
 import vn.com.atomi.charge.learning.service.interfaces.CertificateService;
 
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -27,10 +26,9 @@ implements CertificateService {
         responsePage = new BaseResponse<>();
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userId = authentication.getName();
-        Sort sort = Sort.by(Sort.Direction.ASC, "issue_at");
+        Sort sort = Sort.by(Sort.Direction.DESC, "issuedAt");
         Pageable pageSorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),sort);
         Page<CertificateEntity> certificateEntity = repository.findByUserIdAndDeletedAtIsNull(userId,pageSorted);
-        if(certificateEntity.isEmpty()) return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("certificate.not_found"));
         responsePage.setStatus(HttpStatus.OK);
         responsePage.setData(certificateEntity.map(mapper::toDto));
         return responsePage;
@@ -40,7 +38,7 @@ implements CertificateService {
     public BaseResponse<CertificateDto> verifyCertificate(String certificateCode){
         response = new BaseResponse<>();
         if(certificateCode.isEmpty())
-            return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("certificat.not_found"));
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("certificate.not_found"));
         Optional<CertificateEntity> optionalCertificate = repository.findByCertificateCodeAndDeletedAtIsNull(certificateCode);
         if(optionalCertificate.isEmpty())
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("certificate.not_found"));

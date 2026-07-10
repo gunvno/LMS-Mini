@@ -4,8 +4,10 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import vn.com.atomi.charge.base.model.response.BaseResponse;
 import vn.com.atomi.charge.learning.model.dto.AuthnUserDto;
+import vn.com.atomi.charge.learning.model.request.InternalMailRequest;
 
 @FeignClient(name = "lms-authn-service")
 public interface AuthnClient {
@@ -13,4 +15,6 @@ public interface AuthnClient {
     Boolean checkUser(@PathVariable String id);
     @GetMapping("/internal/v1/AuthnUser/{userId}/info")
     BaseResponse<AuthnUserDto> getUserById(@PathVariable String userId);
+    @PostMapping("/internal/v1/AuthnUser/mail")
+    void sendMail(@RequestBody InternalMailRequest request);
 }

@@ -132,6 +132,17 @@ public class AuthorServiceImpl implements AuthorService {
 
 	@Override
 	@Transactional
+	public BaseResponse<RoleDto> assignStudentRole(String userId) {
+		if (!StringUtils.hasText(userId)) {
+			return BaseResponse.fail(HttpStatus.BAD_REQUEST, "user.invalid_request");
+		}
+		RoleEntity role = findRole(RoleCode.STUDENT.name());
+		assignRoleIfMissing(userId, role);
+		return BaseResponse.success(HttpStatus.OK, mapRole(role));
+	}
+
+	@Override
+	@Transactional
 	public BaseResponse<StaffAccountDto> createInstructorStaff(BaseRequest<StaffAccountCreationRequest> request) {
 		if (request == null || request.getData() == null) {
 			return BaseResponse.fail(HttpStatus.BAD_REQUEST, "user.invalid_request");

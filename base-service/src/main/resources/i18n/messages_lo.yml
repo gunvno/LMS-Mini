@@ -12,6 +12,8 @@ common:
   not_found: "ບໍ່ພົບຂໍ້ມູນ"
   invalid_input: "ກະລຸນາກວດສອບຂໍ້ມູນທີ່ປ້ອນ"
   max_file_size_exceed: "ຂະໜາດຮູບສູງສຸດ: 5MB"
+  operation_failed: "ບໍ່ສາມາດດໍາເນີນຄໍາຮ້ອງຂໍໄດ້. ກະລຸນາລອງໃໝ່"
+  method_not_allowed: "ບໍ່ຮອງຮັບວິທີການຮ້ອງຂໍນີ້"
 
 # =========================
 # Validation
@@ -23,6 +25,7 @@ validation:
   max_length: "{0} ຕ້ອງບໍ່ເກີນ {1} ຕົວອັກສອນ"
   email_invalid: "ອີເມວບໍ່ຖືກຕ້ອງ"
   phone_invalid: "ເບີໂທລະສັບບໍ່ຖືກຕ້ອງ"
+  invalid_request: "ຂໍ້ມູນທີ່ສົ່ງບໍ່ຖືກຕ້ອງ"
 
 # =========================
 # User Management
@@ -71,6 +74,25 @@ order:
   canceled: "ຍົກເລີກຄໍາສັ່ງຊື້ສໍາເລັດ"
   payment_failed: "ການຈ່າຍເງິນລົ້ມເຫຼວ"
   payment_success: "ການຈ່າຍເງິນສໍາເລັດ"
+
+# =========================
+# Payment / Billing
+# =========================
+payment:
+  not_found: "ບໍ່ພົບລາຍການຈ່າຍເງິນ"
+  amount_invalid: "ຈໍານວນເງິນບໍ່ຖືກຕ້ອງ"
+  enrollment_pending: "ກໍາລັງລໍຖ້າການລົງທະບຽນຫຼັກສູດ"
+
+invoice:
+  not_found: "ບໍ່ພົບໃບບິນ"
+  invalid_request: "ຄໍາຮ້ອງຂໍໃບບິນບໍ່ຖືກຕ້ອງ"
+
+payos:
+  not_configured: "ບໍລິການຈ່າຍເງິນຍັງບໍ່ຖືກຕັ້ງຄ່າ"
+  create_failed: "ບໍ່ສາມາດສ້າງລິ້ງຈ່າຍເງິນໄດ້"
+  payment_lookup_failed: "ບໍ່ສາມາດກວດສອບລາຍການຈ່າຍເງິນໄດ້"
+  payment_not_found: "ບໍ່ພົບລາຍການ PayOS"
+  sign_failed: "ບໍ່ສາມາດສ້າງລາຍເຊັນຈ່າຍເງິນໄດ້"
 
 # =========================
 # Security & Auth

@@ -363,6 +363,7 @@ public class NoticeServiceImpl implements NoticeService {
         dto.setDeliveryStatus(recipient.getDeliveryStatus());
         dto.setReadStatus(recipient.getReadStatus());
         dto.setSentAt(recipient.getSentAt());
+        dto.setCreatedDate(recipient.getCreatedDate());
         dto.setReadAt(recipient.getReadAt());
 
         noticeRepository.findEntityById(recipient.getNoticeId()).ifPresent(notice -> {
@@ -374,6 +375,9 @@ public class NoticeServiceImpl implements NoticeService {
             dto.setStatus(notice.getStatus());
             if (dto.getSentAt() == null) {
                 dto.setSentAt(notice.getSentAt());
+            }
+            if (dto.getCreatedDate() == null) {
+                dto.setCreatedDate(notice.getCreatedDate());
             }
         });
 

@@ -38,5 +38,8 @@ public class NoticeDto {
 
     private LocalDateTime sentAt;
 
+    /** Compatibility field consumed by the web notification UI. */
+    private LocalDateTime createdDate;
+
     private LocalDateTime readAt;
 }

@@ -3,6 +3,9 @@ server:
   http2:
     enabled: true
 
+internal:
+  service-key: ${INTERNAL_SERVICE_KEY:lms-mini-internal-change-me}
+
 management:
   endpoint:
     health:
@@ -112,20 +115,20 @@ config:
         get-user-deposit-promotion: ${config.api.prefix.internal}/${config.api.version}/get-user-deposit-promotion
         save-promotion-usage: ${config.api.prefix.internal}/${config.api.version}/save-promotion-usage
   otp:
-    secret-key: 2~wsL|b4*F50
+    secret-key: ${OTP_SECRET_KEY:}
   mail:
-    host: mail.atomi.com.vn
-    port: 465
-    username: ev-atomi@atomi.com.vn
-    password: Atm@87654321
+    host: ${SPRING_MAIL_HOST:}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
   file:
     template-path: templates/
     storage-path: templates/
   minio:
-    url: http://10.38.61.144:9000
-    access-key: NyYeIpDJbDzaoNhCrDd4
-    secret-key: YOJuLq3JWEvPaAquho0FCUSw3iMD5bm6nC84vCA9
-    bucket: evcharge
+    url: ${CONFIG_MINIO_URL:}
+    access-key: ${CONFIG_MINIO_ACCESS_KEY:}
+    secret-key: ${CONFIG_MINIO_SECRET_KEY:}
+    bucket: ${CONFIG_MINIO_BUCKET:}
   service:
     location:
       url: localhost:8087

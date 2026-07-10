@@ -9,3 +9,12 @@ AUTHN_989: "The new password must not be the same as the current password. Pleas
 AUTHN_988: "Invalid password"
 AUTHN_987: "FaceID/TouchID login has been disabled due to incorrect password entry. Please enter your password to continue logging in."
 AUTHN_999: "The account is locked."
+auth:
+  username_existed: "This username is already in use"
+  email_existed: "This email is already registered"
+  otp_required: "Verify your email with an OTP before creating the account"
+  otp_invalid: "The OTP is incorrect or has expired"
+  otp_email_send_failed: "We could not send an OTP to your email. Please try again later"
+user:
+  not_found: "User not found"
+  invalid_request: "Invalid user request"

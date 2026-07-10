@@ -6,6 +6,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -24,6 +27,7 @@ import vn.com.atomi.charge.course.service.interfaces.CourseService;
 import vn.com.atomi.charge.course.service.interfaces.LessonService;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -37,6 +41,18 @@ public class LessonServiceImpl
     private CourseService courseService;
 
     @Override
+    public BaseResponse<Page<LessonDto>> getAll(Map<String, String> params, Pageable pageable) {
+        if (!isInstructorRequest() || canReviewCourses()) {
+            return super.getAll(params, pageable);
+        }
+        Sort sort = Sort.by(Sort.Direction.ASC, "orderIndex")
+                .and(Sort.by(Sort.Direction.ASC, "createdDate"));
+        Pageable sorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+        return BaseResponse.success(HttpStatus.OK,
+                repository.findByInstructorId(currentUserId(), sorted).map(mapper::toDto));
+    }
+
+    @Override
     protected boolean isDuplicate(BaseRequest<LessonDto> request) {
         LessonDto dto = request.getData();
         if (dto.getCourseId() == null || dto.getCode() == null || dto.getCode().isBlank()) {
@@ -47,6 +63,76 @@ public class LessonServiceImpl
         }
         return repository.existsByCourseIdAndCodeAndIdNotAndDeletedAtIsNull(
             dto.getCourseId(), dto.getCode(), dto.getId());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BaseResponse<LessonDto> create(BaseRequest<LessonDto> dto) {
+        assertCanManageCourse(dto.getData().getCourseId());
+        BaseResponse<LessonDto> result = super.create(dto);
+        if (result != null && result.getData() != null) {
+            syncCourseDuration(result.getData().getCourseId());
+        }
+        return result;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BaseResponse<LessonDto> update(BaseRequest<LessonDto> dto) {
+        String oldCourseId = null;
+        if (dto != null && dto.getData() != null && StringUtils.hasText(dto.getData().getId())) {
+            oldCourseId = repository.findEntityById(dto.getData().getId())
+                .map(LessonEntity::getCourseId)
+                .orElse(null);
+        }
+
+        if (StringUtils.hasText(oldCourseId)) {
+            assertCanManageCourse(oldCourseId);
+        }
+        assertCanManageCourse(dto.getData().getCourseId());
+        BaseResponse<LessonDto> result = super.update(dto);
+        if (result != null && result.getData() != null) {
+            syncCourseDuration(result.getData().getCourseId());
+            if (StringUtils.hasText(oldCourseId) && !oldCourseId.equals(result.getData().getCourseId())) {
+                syncCourseDuration(oldCourseId);
+            }
+        }
+        return result;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BaseResponse<LessonDto> delete(String id) {
+        String courseId = repository.findEntityById(id)
+            .map(LessonEntity::getCourseId)
+            .orElse(null);
+
+        assertCanManageCourse(courseId);
+        BaseResponse<LessonDto> result = super.delete(id);
+        if (result != null && result.getStatus() != null && result.getStatus().is2xxSuccessful()) {
+            syncCourseDuration(courseId);
+        }
+        return result;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BaseResponse<LessonDto> delete(List<String> ids) {
+        List<String> courseIds = ids == null
+            ? List.of()
+            : ids.stream()
+                .map(id -> repository.findEntityById(id).map(LessonEntity::getCourseId).orElse(null))
+                .filter(StringUtils::hasText)
+                .distinct()
+                .toList();
+
+        courseIds.forEach(this::assertCanManageCourse);
+
+        BaseResponse<LessonDto> result = super.delete(ids);
+        if (result != null && result.getStatus() != null && result.getStatus().is2xxSuccessful()) {
+            courseIds.forEach(this::syncCourseDuration);
+        }
+        return result;
     }
 
     @Override
@@ -67,8 +153,10 @@ public class LessonServiceImpl
             if(optionalCourse.isEmpty()){
                 return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("course.not_found"));
             }
+            assertCanManageCourse(courseId);
 
             LessonEntity saved = (LessonEntity) repository.save(mapper.toEntity(dto.getData()));
+            syncCourseDuration(courseId);
             response.setStatus(HttpStatus.OK);
             response.setData((LessonDto) mapper.toDto(saved));
         } catch (Exception ex) {
@@ -89,6 +177,9 @@ public class LessonServiceImpl
             Optional<CourseEntity> optionalCourse = courseRepository.findEntityById(courseId);
             if (optionalCourse.isEmpty()) {
                 return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("course.not_found"));
+            }
+            if (isInstructorRequest()) {
+                assertCanManageCourse(courseId);
             }
 
             Sort sort = Sort.by(Sort.Direction.ASC, "orderIndex")
@@ -148,6 +239,49 @@ public class LessonServiceImpl
         }
         return (double) repository.countByCourseIdAndDeletedAtIsNull(courseId);
     }
+
+    private void syncCourseDuration(String courseId) {
+        if (!StringUtils.hasText(courseId)) {
+            return;
+        }
+        Optional<CourseEntity> optionalCourse = courseRepository.findEntityById(courseId);
+        if (optionalCourse.isEmpty()) {
+            return;
+        }
+        CourseEntity course = optionalCourse.get();
+        course.setDurationMinutes(repository.sumDurationMinutesByCourseId(courseId));
+        courseRepository.save(course);
+    }
+
+    private void assertCanManageCourse(String courseId) {
+        if (!isInstructorRequest() || canReviewCourses()) {
+            return;
+        }
+        CourseEntity course = StringUtils.hasText(courseId)
+                ? courseRepository.findEntityById(courseId).orElse(null)
+                : null;
+        if (course == null || !currentUserId().equals(course.getInstructorId())) {
+            throw new AccessDeniedException("common.access_denied");
+        }
+    }
+
+    private boolean isInstructorRequest() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> "LESSON_MANAGE".equals(authority.getAuthority()));
+    }
+
+    private boolean canReviewCourses() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> "COURSE_REVIEW".equals(authority.getAuthority()));
+    }
+
+    private String currentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !StringUtils.hasText(authentication.getName())) {
+            throw new AccessDeniedException("common.access_denied");
+        }
+        return authentication.getName();
+    }
 }
-
-

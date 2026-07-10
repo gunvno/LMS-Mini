@@ -37,80 +37,101 @@ public class GlobalExceptionHandler {
                 ex.getFieldError().getField() : "unknown";
         log.warn("Validation error on field {}: {}", fieldName, ex.getMessage());
         return createErrorResponse(BaseErrorCode.BAD_REQUEST,
-                "Invalid parameter: " + fieldName, HttpStatus.OK);
+                messageService.getMessage("validation.invalid_request"), HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(ServerWebInputException.class)
     public ResponseEntity<BaseResponse<Void>> handleServerWebInputException(ServerWebInputException ex) {
         log.warn("Invalid request: {}", ex.getReason());
         return createErrorResponse(BaseErrorCode.BAD_REQUEST,
-                "Invalid request: " + ex.getReason(), HttpStatus.OK);
+                messageService.getMessage("validation.invalid_request"), HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(MethodNotAllowedException.class)
     public ResponseEntity<BaseResponse<Void>> handleMethodNotAllowed(MethodNotAllowedException ex) {
         log.warn("Method not allowed: {}", ex.getHttpMethod());
         return createErrorResponse(BaseErrorCode.METHOD_NOT_ALLOWED,
-                "HTTP method not allowed: " + ex.getHttpMethod(), HttpStatus.OK);
+                messageService.getMessage("common.method_not_allowed"), HttpStatus.METHOD_NOT_ALLOWED);
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<BaseResponse<Void>> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
         log.warn("Method not supported: {}", ex.getMethod());
         return createErrorResponse(BaseErrorCode.METHOD_NOT_ALLOWED,
-                "HTTP method not supported: " + ex.getMethod(), HttpStatus.OK);
+                messageService.getMessage("common.method_not_allowed"), HttpStatus.METHOD_NOT_ALLOWED);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<BaseResponse<Void>> handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
         log.warn("Message not readable: {}", Util.beautyError(ex));
         return createErrorResponse(BaseErrorCode.BAD_REQUEST,
-                "Invalid request", HttpStatus.OK);
+                messageService.getMessage("validation.invalid_request"), HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<BaseResponse<Void>> handleHttpMessageNotReadable(NoResourceFoundException ex) {
         log.warn("resource not found: {}", Util.beautyError(ex));
-        return createErrorResponse(BaseErrorCode.BAD_REQUEST,
-                "Invalid request", HttpStatus.OK);
+        return createErrorResponse(BaseErrorCode.NOT_FOUND,
+                messageService.getMessage("common.not_found"), HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<BaseResponse<Void>> handleAccessDenied(AccessDeniedException ex) {
         log.warn("Access denied: {}", Util.beautyError(ex));
-        return createErrorResponse(BaseErrorCode.UNAUTHORIZED,
-                messageService.getMessage("common.access_denied"), HttpStatus.OK);
+        return createErrorResponse(BaseErrorCode.FORBIDDEN,
+                messageService.getMessage("common.access_denied"), HttpStatus.FORBIDDEN);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<BaseResponse<Void>> handleValidationExceptions(MethodArgumentNotValidException ex) {
         FieldError errorField = ex.getBindingResult().getFieldErrors().get(0);
         log.warn("invalid param: {}", Util.beautyError(ex));
+        String message = switch (errorField.getCode() == null ? "" : errorField.getCode()) {
+            case "NotBlank", "NotNull", "NotEmpty" -> messageService.getMessage(
+                    "validation.required_field", new Object[]{errorField.getField()});
+            case "Email" -> messageService.getMessage("validation.email_invalid");
+            case "Pattern" -> messageService.getMessage(
+                    "validation.invalid_format", new Object[]{errorField.getField()});
+            default -> messageService.getMessage(errorField.getDefaultMessage());
+        };
         return createErrorResponse(BaseErrorCode.BAD_REQUEST,
-                messageService.getMessage(errorField.getDefaultMessage()), HttpStatus.OK);
+                message, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<BaseResponse<Void>> handleMaxSizeExceedException(MaxUploadSizeExceededException ex) {
         log.warn("upload file error: {}", Util.beautyError(ex));
         return createErrorResponse(BaseErrorCode.BAD_REQUEST,
-                messageService.getMessage("common.max_file_size_exceed"), HttpStatus.OK);
+                messageService.getMessage("common.max_file_size_exceed"), HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<BaseResponse<Void>> handleBusinessException(Exception ex) {
         BusinessException businessEx = (BusinessException) ex;
         log.error("handle business exception: {}, {}", businessEx.getCode(), Util.beautyError(businessEx));
-        return createErrorResponse(businessEx.getCode(), businessEx.getMessage(), HttpStatus.OK);
+        return createErrorResponse(
+                businessEx.getCode(), messageService.getMessage(businessEx.getMessage()), resolveBusinessStatus(businessEx.getCode()));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<BaseResponse<Void>> handleAllUncaughtException(Exception ex) {
         if (ex instanceof BusinessException businessEx) {
-            return createErrorResponse(businessEx.getCode(), businessEx.getMessage(), HttpStatus.OK);
+            return createErrorResponse(
+                    businessEx.getCode(), messageService.getMessage(businessEx.getMessage()), resolveBusinessStatus(businessEx.getCode()));
         }
         log.error("Unhandled exception: {}", Util.beautyError(ex));
-        return createErrorResponse(BaseErrorCode.INTERNAL_ERROR, HttpStatus.OK);
+        return createErrorResponse(BaseErrorCode.INTERNAL_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    private HttpStatus resolveBusinessStatus(String code) {
+        if (code == null) {
+            return HttpStatus.BAD_REQUEST;
+        }
+        return switch (code) {
+            case "UNAUTHENTICATED" -> HttpStatus.UNAUTHORIZED;
+            case "FORBIDDEN" -> HttpStatus.FORBIDDEN;
+            default -> HttpStatus.BAD_REQUEST;
+        };
     }
 
     private ResponseEntity<BaseResponse<Void>> createErrorResponse(BaseErrorCode code, String message, HttpStatus httpStatus) {

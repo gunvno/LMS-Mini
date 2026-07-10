@@ -50,8 +50,8 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -73,6 +73,7 @@ services:
       consul:
         condition: service_healthy
     environment:
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-lms-mini-internal-change-me}
       SPRING_CLOUD_CONSUL_HOST: consul
       SPRING_CLOUD_CONSUL_PORT: 8500
       CONFIG_API_AUTHN: http://authn-service:8081
@@ -81,6 +82,8 @@ services:
       CONFIG_API_LEARNING: http://learning-service:8084
       CONFIG_API_QUIZ: http://quiz-service:8085
       CONFIG_API_NOTICE: http://notice-service:8086
+      CONFIG_API_BILLING: http://billing-service:8087
+      CONFIG_API_INVOICE: http://invoice-service:8088
     ports:
       - "8080:8080"
     volumes:
@@ -104,6 +107,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-lms-mini-internal-change-me}
       SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/lms_authn_service?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
@@ -112,9 +116,16 @@ services:
       SPRING_CLOUD_CONSUL_PORT: 8500
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      # Explicit Spring properties override the legacy `config.mail` fallback
+      # bundled in base-service (which still points at mail.atomi.com.vn:465).
+      SPRING_MAIL_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SPRING_MAIL_PORT: ${SMTP_PORT:-587}
+      SPRING_MAIL_USERNAME: ${SMTP_USERNAME:-longta2004.vtv3@gmail.com}
+      SPRING_MAIL_PASSWORD: ${SMTP_APP_PASSWORD:?Set SMTP_APP_PASSWORD in .env}
+      JWT_SIGNER_KEY: ${JWT_SIGNER_KEY:?Set JWT_SIGNER_KEY in .env}
       CONFIG_MINIO_URL: http://minio:9000
-      CONFIG_MINIO_ACCESS_KEY: minioadmin
-      CONFIG_MINIO_SECRET_KEY: minioadmin
+      CONFIG_MINIO_ACCESS_KEY: ${CONFIG_MINIO_ACCESS_KEY:-minioadmin}
+      CONFIG_MINIO_SECRET_KEY: ${CONFIG_MINIO_SECRET_KEY:-minioadmin}
       CONFIG_MINIO_BUCKET: lms-mini
     ports:
       - "8081:8081"
@@ -139,6 +150,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-lms-mini-internal-change-me}
       SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/lms_author_service?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
@@ -148,8 +160,8 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       CONFIG_MINIO_URL: http://minio:9000
-      CONFIG_MINIO_ACCESS_KEY: minioadmin
-      CONFIG_MINIO_SECRET_KEY: minioadmin
+      CONFIG_MINIO_ACCESS_KEY: ${CONFIG_MINIO_ACCESS_KEY:-minioadmin}
+      CONFIG_MINIO_SECRET_KEY: ${CONFIG_MINIO_SECRET_KEY:-minioadmin}
       CONFIG_MINIO_BUCKET: lms-mini
     ports:
       - "8082:8082"
@@ -174,6 +186,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-lms-mini-internal-change-me}
       SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/lms_course_service?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
@@ -183,8 +196,8 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       CONFIG_MINIO_URL: http://minio:9000
-      CONFIG_MINIO_ACCESS_KEY: minioadmin
-      CONFIG_MINIO_SECRET_KEY: minioadmin
+      CONFIG_MINIO_ACCESS_KEY: ${CONFIG_MINIO_ACCESS_KEY:-minioadmin}
+      CONFIG_MINIO_SECRET_KEY: ${CONFIG_MINIO_SECRET_KEY:-minioadmin}
       CONFIG_MINIO_BUCKET: lms-mini
     ports:
       - "8083:8083"
@@ -209,6 +222,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-lms-mini-internal-change-me}
       SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/lms_learning_service?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
@@ -218,8 +232,8 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       CONFIG_MINIO_URL: http://minio:9000
-      CONFIG_MINIO_ACCESS_KEY: minioadmin
-      CONFIG_MINIO_SECRET_KEY: minioadmin
+      CONFIG_MINIO_ACCESS_KEY: ${CONFIG_MINIO_ACCESS_KEY:-minioadmin}
+      CONFIG_MINIO_SECRET_KEY: ${CONFIG_MINIO_SECRET_KEY:-minioadmin}
       CONFIG_MINIO_BUCKET: lms-mini
     ports:
       - "8084:8084"
@@ -244,6 +258,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-lms-mini-internal-change-me}
       SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/lms_quiz_service?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
@@ -253,8 +268,8 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       CONFIG_MINIO_URL: http://minio:9000
-      CONFIG_MINIO_ACCESS_KEY: minioadmin
-      CONFIG_MINIO_SECRET_KEY: minioadmin
+      CONFIG_MINIO_ACCESS_KEY: ${CONFIG_MINIO_ACCESS_KEY:-minioadmin}
+      CONFIG_MINIO_SECRET_KEY: ${CONFIG_MINIO_SECRET_KEY:-minioadmin}
       CONFIG_MINIO_BUCKET: lms-mini
     ports:
       - "8085:8085"
@@ -279,6 +294,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-lms-mini-internal-change-me}
       SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/lms_notice_service?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
@@ -288,13 +304,78 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       CONFIG_MINIO_URL: http://minio:9000
-      CONFIG_MINIO_ACCESS_KEY: minioadmin
-      CONFIG_MINIO_SECRET_KEY: minioadmin
+      CONFIG_MINIO_ACCESS_KEY: ${CONFIG_MINIO_ACCESS_KEY:-minioadmin}
+      CONFIG_MINIO_SECRET_KEY: ${CONFIG_MINIO_SECRET_KEY:-minioadmin}
       CONFIG_MINIO_BUCKET: lms-mini
+      FIREBASE_CREDENTIALS_PATH: /app/firebase-service-account.json
     ports:
       - "8086:8086"
     volumes:
       - ./notice-service/logs:/app/logs
+      - ./notice-service/firebase-service-account.json:/app/firebase-service-account.json:ro
+
+  billing-service:
+    container_name: lms-billing-service
+    build:
+      context: ./billing-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      consul:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/lms_billing_service?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_SCHEMA: lms_billing_service
+      SPRING_CLOUD_CONSUL_HOST: consul
+      SPRING_CLOUD_CONSUL_PORT: 8500
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      PAYOS_ENABLED: ${PAYOS_ENABLED:-false}
+      PAYOS_BASE_URL: ${PAYOS_BASE_URL:-https://api-merchant.payos.vn}
+      PAYOS_CLIENT_ID: ${PAYOS_CLIENT_ID:-}
+      PAYOS_API_KEY: ${PAYOS_API_KEY:-}
+      PAYOS_CHECKSUM_KEY: ${PAYOS_CHECKSUM_KEY:-}
+      PAYOS_RETURN_URL: ${PAYOS_RETURN_URL:-http://localhost:3001/payment/success}
+      PAYOS_CANCEL_URL: ${PAYOS_CANCEL_URL:-http://localhost:3001/payment/cancel}
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-lms-mini-internal-change-me}
+    ports:
+      - "8087:8087"
+    volumes:
+      - ./billing-service/logs:/app/logs
+
+  invoice-service:
+    container_name: lms-invoice-service
+    build:
+      context: ./invoice-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      consul:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/lms_invoice_service?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_SCHEMA: lms_invoice_service
+      SPRING_CLOUD_CONSUL_HOST: consul
+      SPRING_CLOUD_CONSUL_PORT: 8500
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-lms-mini-internal-change-me}
+    ports:
+      - "8088:8088"
+    volumes:
+      - ./invoice-service/logs:/app/logs
 
 volumes:
   lms-mini-mysql-data:
