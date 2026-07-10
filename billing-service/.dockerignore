@@ -1,0 +1,6 @@
+.DS_Store
+logs
+*.log
+
+target/*
+!target/billing-service-1.0.0.jar

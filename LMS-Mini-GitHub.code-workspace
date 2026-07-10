@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../lms-admin"
+		},
+		{
+			"path": "../lms-frontend"
+		}
+	],
+	"settings": {}
+}
