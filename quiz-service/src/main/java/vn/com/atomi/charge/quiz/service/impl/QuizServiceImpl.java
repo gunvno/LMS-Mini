@@ -1,6 +1,9 @@
 package vn.com.atomi.charge.quiz.service.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -19,6 +22,7 @@ import vn.com.atomi.charge.base.model.response.BaseResponse;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class QuizServiceImpl extends BaseService<QuizRepository, QuizDto, QuizEntity, QuizMapper>
@@ -28,6 +32,40 @@ implements QuizService {
     private QuizAttemptRepository attemptRepository;
     @Autowired
     private CourseClient courseClient;
+    @Autowired
+    private QuizOwnershipService ownershipService;
+
+    @Override
+    public BaseResponse<Page<QuizDto>> getAll(Map<String, String> params, Pageable pageable) {
+        if (ownershipService.canReviewCourses()) {
+            return super.getAll(params, pageable);
+        }
+
+        QuizEntity scopedQuiz = resolveScopedQuiz(params);
+        if (scopedQuiz != null) {
+            ownershipService.assertCanViewQuiz(scopedQuiz);
+            return super.getAll(params, pageable);
+        }
+        if (params != null && (params.containsKey("courseId") || params.containsKey("lessonId"))) {
+            return super.getAll(params, pageable);
+        }
+
+        List<String> courseIds = ownershipService.getVisibleCourseIds();
+        Page<QuizEntity> result = courseIds.isEmpty()
+                ? Page.empty(pageable)
+                : ownershipService.isStudentRequest()
+                ? repository.findByCourseIdInAndStatusAndDeletedAtIsNull(courseIds, QuizStatus.ACTIVE, pageable)
+                : repository.findByCourseIdInAndDeletedAtIsNull(courseIds, pageable);
+        return BaseResponse.success(HttpStatus.OK, result.map(mapper::toDto));
+    }
+
+    @Override
+    public BaseResponse<QuizDto> getDetails(String id) {
+        QuizEntity quiz = repository.findEntityById(id)
+                .orElseThrow(() -> new AccessDeniedException("common.access_denied"));
+        ownershipService.assertCanViewQuiz(quiz);
+        return BaseResponse.success(HttpStatus.OK, mapper.toDto(quiz));
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -107,5 +145,21 @@ implements QuizService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication != null && authentication.getAuthorities().stream()
                 .anyMatch(authority -> "COURSE_REVIEW".equals(authority.getAuthority()));
+    }
+
+    private QuizEntity resolveScopedQuiz(Map<String, String> params) {
+        if (params == null) {
+            return null;
+        }
+        String courseId = params.get("courseId");
+        if (courseId != null && !courseId.isBlank()) {
+            return repository.findByCourseIdInAndDeletedAtIsNull(List.of(courseId), Pageable.ofSize(1))
+                    .stream().findFirst().orElse(null);
+        }
+        String lessonId = params.get("lessonId");
+        if (lessonId != null && !lessonId.isBlank()) {
+            return repository.findFirstByLessonIdAndDeletedAtIsNull(lessonId).orElse(null);
+        }
+        return null;
     }
 }

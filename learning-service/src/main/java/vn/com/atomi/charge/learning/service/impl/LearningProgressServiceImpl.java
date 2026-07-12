@@ -18,6 +18,8 @@ import vn.com.atomi.charge.learning.repository.Client.CourseClient;
 import vn.com.atomi.charge.learning.repository.EnrollmentRepository;
 import vn.com.atomi.charge.learning.repository.LearningProgressRepository;
 import vn.com.atomi.charge.learning.service.interfaces.LearningProgressService;
+import vn.com.atomi.charge.learning.service.interfaces.EnrollmentService;
+import vn.com.atomi.charge.learning.model.enums.EnrollmentStatus;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -29,6 +31,7 @@ implements LearningProgressService {
 
     private final CourseClient courseClient;
     private final EnrollmentRepository enrollmentRepository;
+    private final EnrollmentService enrollmentService;
 
     @Override
     public BaseResponse<LearningProgressDto> startLesson(String lessonId){
@@ -41,9 +44,12 @@ implements LearningProgressService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userId = authentication.getName();
         Optional<EnrollmentEntity> optionalEnrollment = enrollmentRepository.findByUserIdAndCourseIdAndDeletedAtIsNull(userId, courseId);
-        if(optionalEnrollment.isEmpty()){
+        if(optionalEnrollment.isEmpty() || !hasContentAccess(optionalEnrollment.get())){
             String localizedMsg = i18n.getMessage("learning.not_found");
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, localizedMsg);
+        }
+        if (!enrollmentService.getCurrentUserAccessibleLessonIds(courseId).contains(lessonId)) {
+            return BaseResponse.fail(HttpStatus.FORBIDDEN, i18n.getMessage("common.access_denied"));
         }
         Optional<LearningProgressEntity> optionalProgress =
                 repository.findByEnrollmentIdAndLessonIdAndDeletedAtIsNull(optionalEnrollment.get().getId(), lessonId);
@@ -75,9 +81,12 @@ implements LearningProgressService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userId = authentication.getName();
         Optional<EnrollmentEntity> optionalEnrollment = enrollmentRepository.findByUserIdAndCourseIdAndDeletedAtIsNull(userId, courseId);
-        if(optionalEnrollment.isEmpty()){
+        if(optionalEnrollment.isEmpty() || !hasContentAccess(optionalEnrollment.get())){
             String localizedMsg = i18n.getMessage("learning.not_found");
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, localizedMsg);
+        }
+        if (!enrollmentService.getCurrentUserAccessibleLessonIds(courseId).contains(lessonId)) {
+            return BaseResponse.fail(HttpStatus.FORBIDDEN, i18n.getMessage("common.access_denied"));
         }
         Optional<LearningProgressEntity> optionalProgress =
                 repository.findByEnrollmentIdAndLessonIdAndDeletedAtIsNull(optionalEnrollment.get().getId(), lessonId);
@@ -113,6 +122,11 @@ implements LearningProgressService {
         response.setStatus(HttpStatus.OK);
         response.setData(mapper.toDto(saved));
         return response;
+    }
+
+    private boolean hasContentAccess(EnrollmentEntity enrollment) {
+        return enrollment.getStatus() == EnrollmentStatus.ACTIVE
+                || enrollment.getStatus() == EnrollmentStatus.COMPLETED;
     }
 
 }

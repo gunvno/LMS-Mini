@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.com.atomi.charge.learning.service.interfaces.EnrollmentService;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/internal/v1/enrollment")
 public class InternalEnrollmentController {
@@ -23,5 +25,20 @@ public class InternalEnrollmentController {
     @PostMapping("/users/{userId}/courses/{courseId}/enroll")
     public ResponseEntity<?> enrollPaidCourse(@PathVariable String userId, @PathVariable String courseId) {
         return ResponseEntity.ok(enrollmentService.enrollCourseForUser(userId, courseId));
+    }
+
+    @GetMapping("/courses/{courseId}/access")
+    public Boolean hasCourseAccess(@PathVariable String courseId) {
+        return enrollmentService.hasCurrentUserCourseAccess(courseId);
+    }
+
+    @GetMapping("/course-ids/access")
+    public List<String> getAccessibleCourseIds() {
+        return enrollmentService.getCurrentUserAccessibleCourseIds();
+    }
+
+    @GetMapping("/courses/{courseId}/lesson-ids/access")
+    public List<String> getAccessibleLessonIds(@PathVariable String courseId) {
+        return enrollmentService.getCurrentUserAccessibleLessonIds(courseId);
     }
 }

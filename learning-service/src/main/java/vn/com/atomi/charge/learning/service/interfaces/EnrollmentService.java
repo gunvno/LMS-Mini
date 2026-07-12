@@ -10,6 +10,8 @@ import vn.com.atomi.charge.learning.model.dto.EnrollmentDto;
 import vn.com.atomi.charge.learning.model.entity.EnrollmentEntity;
 import vn.com.atomi.charge.learning.repository.EnrollmentRepository;
 
+import java.util.List;
+
 
 public interface EnrollmentService extends IBaseService<EnrollmentRepository, EnrollmentDto, EnrollmentEntity, EnrollmentMapper> {
     BaseResponse<EnrollmentDto> enrollCourse(BaseRequest<EnrollmentDto> dto, String courseId);
@@ -17,4 +19,7 @@ public interface EnrollmentService extends IBaseService<EnrollmentRepository, En
     BaseResponse<EnrollmentDto> finishCourse(String courseId);
     BaseResponse<EnrollmentDto> findEnrollmentByCourseIdAndUserId(String courseId);
     BaseResponse<EnrollmentDto> enrollCourseForUser(String userId, String courseId);
+    boolean hasCurrentUserCourseAccess(String courseId);
+    List<String> getCurrentUserAccessibleCourseIds();
+    List<String> getCurrentUserAccessibleLessonIds(String courseId);
 }

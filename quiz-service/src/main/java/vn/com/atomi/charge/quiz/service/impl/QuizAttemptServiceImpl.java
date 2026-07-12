@@ -50,6 +50,8 @@ public class QuizAttemptServiceImpl extends BaseService<QuizAttemptRepository, Q
 
     @Autowired
     private LearningClient learningClient;
+    @Autowired
+    private QuizOwnershipService ownershipService;
     @Override
     public BaseResponse<QuizAttemptDto> startQuiz(String QuizId){
         response = new BaseResponse<>();
@@ -62,6 +64,7 @@ public class QuizAttemptServiceImpl extends BaseService<QuizAttemptRepository, Q
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("quiz.not_found"));
 
         QuizEntity quiz = optionalQuiz.get();
+        ownershipService.assertCanViewQuiz(quiz);
         if (quiz.getStatus() != QuizStatus.ACTIVE) {
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("quiz.invalid_status"));
         }
@@ -133,6 +136,7 @@ public class QuizAttemptServiceImpl extends BaseService<QuizAttemptRepository, Q
         }
 
         QuizEntity quiz = optionalQuiz.get();
+        ownershipService.assertCanViewQuiz(quiz);
         List<QuestionEntity> questions = questionRepository.findByQuizIdAndDeletedAtIsNullOrderByOrderIndexAsc(quiz.getId());
         List<QuizAttemptAnswerInputDto> submittedAnswers = request == null || request.getData() == null || request.getData().getAnswers() == null
                 ? Collections.emptyList()

@@ -1,8 +1,6 @@
 package vn.com.atomi.charge.course.service.impl;
 
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -280,6 +278,16 @@ public class CourseServiceImpl
         return repository.findEntityById(courseId)
                 .map(course -> userId.equals(course.getInstructorId()))
                 .orElse(false);
+    }
+
+    @Override
+    public List<String> getInstructorCourseIds(String userId) {
+        if (!StringUtils.hasText(userId)) {
+            return List.of();
+        }
+        return repository.findByInstructorIdAndDeletedAtIsNull(userId).stream()
+                .map(CourseEntity::getId)
+                .toList();
     }
 
     @Override

@@ -1,6 +1,11 @@
 package vn.com.atomi.charge.course.service.impl;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -10,6 +15,9 @@ import vn.com.atomi.charge.base.model.response.BaseResponse;
 import vn.com.atomi.charge.base.service.BaseService;
 import vn.com.atomi.charge.base.util.StringUtil;
 import vn.com.atomi.charge.course.mapper.LessonResourceMapper;
+import vn.com.atomi.charge.course.client.LearningClient;
+import vn.com.atomi.charge.course.model.entity.CourseEntity;
+import vn.com.atomi.charge.course.model.entity.LessonEntity;
 import vn.com.atomi.charge.course.model.dto.LessonResourceDto;
 import vn.com.atomi.charge.course.model.entity.LessonResourceEntity;
 import vn.com.atomi.charge.course.model.enums.LessonResourceStatus;
@@ -17,11 +25,13 @@ import vn.com.atomi.charge.course.model.enums.LessonResourceType;
 import vn.com.atomi.charge.course.model.storage.StorageUploadResult;
 import vn.com.atomi.charge.course.repository.LessonRepository;
 import vn.com.atomi.charge.course.repository.LessonResourceRepository;
+import vn.com.atomi.charge.course.repository.CourseRepository;
 import vn.com.atomi.charge.course.service.interfaces.LessonResourceService;
 import vn.com.atomi.charge.course.service.interfaces.StorageService;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.List;
 
 @Service
 public class LessonResourceServiceImpl
@@ -46,10 +56,85 @@ public class LessonResourceServiceImpl
 
     private final LessonRepository lessonRepository;
     private final StorageService storageService;
+    private final CourseRepository courseRepository;
+    private final LearningClient learningClient;
 
-    public LessonResourceServiceImpl(LessonRepository lessonRepository, StorageService storageService) {
+    public LessonResourceServiceImpl(LessonRepository lessonRepository,
+                                     StorageService storageService,
+                                     CourseRepository courseRepository,
+                                     LearningClient learningClient) {
         this.lessonRepository = lessonRepository;
         this.storageService = storageService;
+        this.courseRepository = courseRepository;
+        this.learningClient = learningClient;
+    }
+
+    @Override
+    public BaseResponse<Page<LessonResourceDto>> getAll(Map<String, String> params, Pageable pageable) {
+        if (canReviewCourses()) {
+            return super.getAll(params, pageable);
+        }
+        if (isInstructorRequest()) {
+            return BaseResponse.success(HttpStatus.OK,
+                    repository.findByInstructorId(currentUserId(), pageable).map(mapper::toDto));
+        }
+        String lessonId = params == null ? null : params.get("lessonId");
+        assertStudentCanAccessLesson(lessonId);
+        return BaseResponse.success(HttpStatus.OK,
+                repository.findByLessonIdAndStatusAndDeletedAtIsNull(
+                        lessonId, LessonResourceStatus.ACTIVE, pageable).map(mapper::toDto));
+    }
+
+    @Override
+    public BaseResponse<LessonResourceDto> getDetails(String id) {
+        LessonResourceEntity resource = repository.findEntityById(id)
+                .orElseThrow(() -> new AccessDeniedException("common.access_denied"));
+        if (canReviewCourses()) {
+            return BaseResponse.success(HttpStatus.OK, mapper.toDto(resource));
+        }
+        if (isInstructorRequest()) {
+            assertCanManageLesson(resource.getLessonId());
+        } else {
+            if (resource.getStatus() != LessonResourceStatus.ACTIVE) {
+                throw new AccessDeniedException("common.access_denied");
+            }
+            assertStudentCanAccessLesson(resource.getLessonId());
+        }
+        return BaseResponse.success(HttpStatus.OK, mapper.toDto(resource));
+    }
+
+    @Override
+    public BaseResponse<LessonResourceDto> create(vn.com.atomi.charge.base.model.request.BaseRequest<LessonResourceDto> request) {
+        assertCanManageLesson(request.getData().getLessonId());
+        return super.create(request);
+    }
+
+    @Override
+    public BaseResponse<LessonResourceDto> update(vn.com.atomi.charge.base.model.request.BaseRequest<LessonResourceDto> request) {
+        LessonResourceEntity existing = repository.findEntityById(request.getData().getId())
+                .orElseThrow(() -> new AccessDeniedException("common.access_denied"));
+        assertCanManageLesson(existing.getLessonId());
+        assertCanManageLesson(request.getData().getLessonId());
+        return super.update(request);
+    }
+
+    @Override
+    public BaseResponse<LessonResourceDto> delete(String id) {
+        LessonResourceEntity existing = repository.findEntityById(id)
+                .orElseThrow(() -> new AccessDeniedException("common.access_denied"));
+        assertCanManageLesson(existing.getLessonId());
+        return super.delete(id);
+    }
+
+    @Override
+    public BaseResponse<LessonResourceDto> delete(List<String> ids) {
+        ids.stream()
+                .map(id -> repository.findEntityById(id)
+                        .orElseThrow(() -> new AccessDeniedException("common.access_denied")))
+                .map(LessonResourceEntity::getLessonId)
+                .distinct()
+                .forEach(this::assertCanManageLesson);
+        return super.delete(ids);
     }
 
     @Override
@@ -60,12 +145,12 @@ public class LessonResourceServiceImpl
         String title,
         String externalUrl
     ) {
+        assertCanManageLesson(lessonId);
         response = new BaseResponse<>();
         try {
             if (!StringUtils.hasText(lessonId) || lessonRepository.findEntityById(lessonId).isEmpty()) {
                 return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("lesson.not_found"));
             }
-
             if (!StringUtils.hasText(title)) {
                 return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("lesson_resource.title_required"));
             }
@@ -93,6 +178,60 @@ public class LessonResourceServiceImpl
             response.setMessage(StringUtil.beautyError(ex));
         }
         return response;
+    }
+
+    private void assertStudentCanAccessLesson(String lessonId) {
+        LessonEntity lesson = StringUtils.hasText(lessonId)
+                ? lessonRepository.findEntityById(lessonId).orElse(null)
+                : null;
+        if (lesson == null) {
+            throw new AccessDeniedException("common.access_denied");
+        }
+        CourseEntity course = courseRepository.findEntityById(lesson.getCourseId()).orElse(null);
+        List<String> accessibleIds = course == null ? List.of()
+                : learningClient.getAccessibleLessonIds(course.getId());
+        if (course == null
+                || course.getStatus() != vn.com.atomi.charge.course.model.enums.CourseStatus.PUBLISHED
+                || accessibleIds == null
+                || !accessibleIds.contains(lessonId)) {
+            throw new AccessDeniedException("common.access_denied");
+        }
+    }
+
+    private void assertCanManageLesson(String lessonId) {
+        if (canReviewCourses()) {
+            return;
+        }
+        LessonEntity lesson = StringUtils.hasText(lessonId)
+                ? lessonRepository.findEntityById(lessonId).orElse(null)
+                : null;
+        CourseEntity course = lesson == null ? null
+                : courseRepository.findEntityById(lesson.getCourseId()).orElse(null);
+        if (course == null || !currentUserId().equals(course.getInstructorId())) {
+            throw new AccessDeniedException("common.access_denied");
+        }
+    }
+
+    private boolean isInstructorRequest() {
+        return hasAuthority("RESOURCE_MANAGE");
+    }
+
+    private boolean canReviewCourses() {
+        return hasAuthority("COURSE_REVIEW");
+    }
+
+    private boolean hasAuthority(String authority) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(item -> authority.equals(item.getAuthority()));
+    }
+
+    private String currentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !StringUtils.hasText(authentication.getName())) {
+            throw new AccessDeniedException("common.access_denied");
+        }
+        return authentication.getName();
     }
 
     private LessonResourceEntity buildFileResource(String lessonId, MultipartFile file, String title) {

@@ -3,6 +3,8 @@ package vn.com.atomi.charge.quiz.service.impl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 import vn.com.atomi.charge.base.model.enums.BaseErrorCode;
 import vn.com.atomi.charge.base.model.request.BaseRequest;
@@ -21,6 +23,7 @@ import vn.com.atomi.charge.quiz.service.interfaces.AnswerService;
 import java.util.Locale;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
 
 @Service
 public class AnswerServiceImpl extends BaseService<AnswerRepository, AnswerDto, AnswerEntity, AnswerMapper>
@@ -33,8 +36,39 @@ implements AnswerService {
     private QuizOwnershipService ownershipService;
 
     @Override
+    public BaseResponse<Page<AnswerDto>> getAll(Map<String, String> params, Pageable pageable) {
+        String questionId = params == null ? null : params.get("questionId");
+        QuestionEntity question = questionId == null ? null
+                : questionRepository.findEntityById(questionId).orElse(null);
+        if (question == null) {
+            throw new org.springframework.security.access.AccessDeniedException("common.access_denied");
+        }
+        assertCanViewQuestion(question);
+        BaseResponse<Page<AnswerDto>> result = super.getAll(params, pageable);
+        if (ownershipService.isStudentRequest() && result.getData() != null) {
+            result.getData().forEach(answer -> answer.setCorrect(null));
+        }
+        return result;
+    }
+
+    @Override
+    public BaseResponse<AnswerDto> getDetails(String id) {
+        AnswerEntity answer = repository.findEntityById(id)
+                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied"));
+        assertCanViewAnswer(answer);
+        AnswerDto dto = mapper.toDto(answer);
+        if (ownershipService.isStudentRequest()) {
+            dto.setCorrect(null);
+        }
+        return BaseResponse.success(HttpStatus.OK, dto);
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public BaseResponse<AnswerDto> createAnswer(BaseRequest<AnswerDto> dto, String questionId){
+        QuestionEntity question = questionRepository.findEntityById(questionId)
+                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied"));
+        assertCanManageQuestion(question);
         response = new BaseResponse<>();
         try {
             getRequest();
@@ -50,8 +84,6 @@ implements AnswerService {
             if(optionalQuestion.isEmpty()){
                 return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("question.not_found"));
             }
-            assertCanManageQuestion(optionalQuestion.get());
-
             AnswerEntity saved = (AnswerEntity) repository.save(mapper.toEntity(dto.getData()));
             response.setStatus(HttpStatus.OK);
             response.setData((AnswerDto) mapper.toDto(saved));
@@ -125,5 +157,17 @@ implements AnswerService {
         vn.com.atomi.charge.quiz.model.entity.QuizEntity quiz = quizRepository.findEntityById(question.getQuizId())
                 .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied"));
         ownershipService.assertCanManageCourse(quiz.getCourseId());
+    }
+
+    private void assertCanViewAnswer(AnswerEntity answer) {
+        QuestionEntity question = questionRepository.findEntityById(answer.getQuestionId())
+                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied"));
+        assertCanViewQuestion(question);
+    }
+
+    private void assertCanViewQuestion(QuestionEntity question) {
+        vn.com.atomi.charge.quiz.model.entity.QuizEntity quiz = quizRepository.findEntityById(question.getQuizId())
+                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied"));
+        ownershipService.assertCanViewQuiz(quiz);
     }
 }

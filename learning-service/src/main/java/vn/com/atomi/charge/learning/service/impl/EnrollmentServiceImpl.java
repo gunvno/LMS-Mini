@@ -43,6 +43,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Set;
+import java.util.HashSet;
 
 @Service
 @RequiredArgsConstructor
@@ -263,8 +265,17 @@ public class EnrollmentServiceImpl extends BaseService<EnrollmentRepository,
             }
             Sort sort = Sort.by(Sort.Direction.ASC, "createdDate");
             Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
-            Page<EnrollmentEntity> enrollments =
-                    repository.findByUserIdAndDeletedAtIsNull(userId, sortedPageable);
+            Page<EnrollmentEntity> enrollments;
+            if (hasAuthority("ENROLLMENT_MANAGE")) {
+                enrollments = repository.getAll(sortedPageable);
+            } else if (hasAuthority("COURSE_MANAGE")) {
+                List<String> ownedCourseIds = courseClient.getInstructorCourseIds(userId);
+                enrollments = ownedCourseIds == null || ownedCourseIds.isEmpty()
+                        ? Page.empty(sortedPageable)
+                        : repository.findByCourseIdInAndDeletedAtIsNull(ownedCourseIds, sortedPageable);
+            } else {
+                enrollments = repository.findByUserIdAndDeletedAtIsNull(userId, sortedPageable);
+            }
 
             responsePage.setStatus(HttpStatus.OK);
             responsePage.setData(enrollments.map(mapper::toDto));
@@ -340,11 +351,94 @@ public class EnrollmentServiceImpl extends BaseService<EnrollmentRepository,
         if(courseId.isEmpty())
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("course.not_found"));
         Optional<EnrollmentEntity> optionalEnrollment = repository.findByUserIdAndCourseIdAndDeletedAtIsNull(userId,courseId);
-        if(optionalEnrollment.isEmpty())
+        if(optionalEnrollment.isEmpty() || !hasContentAccess(optionalEnrollment.get()))
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("course.not_found"));
         EnrollmentEntity enrollment = optionalEnrollment.get();
         response.setData(mapper.toDto(enrollment));
         response.setStatus(HttpStatus.OK);
         return response;
+    }
+
+    @Override
+    public boolean hasCurrentUserCourseAccess(String courseId) {
+        String userId = currentUserId();
+        if (userId == null || userId.isBlank() || courseId == null || courseId.isBlank()) {
+            return false;
+        }
+        return repository.findByUserIdAndCourseIdAndDeletedAtIsNull(userId, courseId)
+                .filter(this::hasContentAccess)
+                .isPresent();
+    }
+
+    @Override
+    public List<String> getCurrentUserAccessibleCourseIds() {
+        String userId = currentUserId();
+        if (userId == null || userId.isBlank()) {
+            return List.of();
+        }
+        return repository.findByUserIdAndStatusInAndDeletedAtIsNull(
+                        userId, List.of(EnrollmentStatus.ACTIVE, EnrollmentStatus.COMPLETED)).stream()
+                .map(EnrollmentEntity::getCourseId)
+                .distinct()
+                .toList();
+    }
+
+    @Override
+    public List<String> getCurrentUserAccessibleLessonIds(String courseId) {
+        String userId = currentUserId();
+        EnrollmentEntity enrollment = userId == null ? null
+                : repository.findByUserIdAndCourseIdAndDeletedAtIsNull(userId, courseId)
+                .filter(this::hasContentAccess)
+                .orElse(null);
+        if (enrollment == null) {
+            return List.of();
+        }
+
+        List<LessonDto> lessons = courseClient.getLessonByCourseId(courseId);
+        if (lessons == null || lessons.isEmpty()) {
+            return List.of();
+        }
+        lessons = lessons.stream()
+                .sorted(java.util.Comparator.comparing(
+                        LessonDto::getOrderIndex,
+                        java.util.Comparator.nullsLast(Integer::compareTo)))
+                .toList();
+
+        List<LearningProgressEntity> progresses =
+                learningProgressRepository.findByEnrollmentIdAndDeletedAtIsNull(enrollment.getId());
+        Set<String> startedOrCompleted = new HashSet<>();
+        Set<String> completed = new HashSet<>();
+        for (LearningProgressEntity progress : progresses) {
+            if (progress.getStatus() == LearningProgressStatus.IN_PROGRESS
+                    || progress.getStatus() == LearningProgressStatus.COMPLETED) {
+                startedOrCompleted.add(progress.getLessonId());
+            }
+            if (progress.getStatus() == LearningProgressStatus.COMPLETED) {
+                completed.add(progress.getLessonId());
+            }
+        }
+
+        Set<String> accessible = new HashSet<>(startedOrCompleted);
+        accessible.add(lessons.get(0).getId());
+        for (int index = 1; index < lessons.size(); index++) {
+            if (completed.contains(lessons.get(index - 1).getId())) {
+                accessible.add(lessons.get(index).getId());
+            }
+        }
+        return lessons.stream()
+                .map(LessonDto::getId)
+                .filter(accessible::contains)
+                .toList();
+    }
+
+    private boolean hasContentAccess(EnrollmentEntity enrollment) {
+        return enrollment.getStatus() == EnrollmentStatus.ACTIVE
+                || enrollment.getStatus() == EnrollmentStatus.COMPLETED;
+    }
+
+    private boolean hasAuthority(String authority) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(item -> authority.equals(item.getAuthority()));
     }
 }

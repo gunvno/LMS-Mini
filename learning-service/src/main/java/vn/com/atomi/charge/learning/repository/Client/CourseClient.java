@@ -30,4 +30,7 @@ public interface CourseClient {
     List<LessonDto> getLessonByCourseId(@PathVariable String id);
     @GetMapping("/internal/v1/lesson/count/{id}")
     Double countLessonInCourse(@PathVariable String id);
+
+    @GetMapping("/internal/v1/courses/instructors/{userId}/ids")
+    List<String> getInstructorCourseIds(@PathVariable String userId);
 }

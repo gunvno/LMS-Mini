@@ -7,6 +7,7 @@ import vn.com.atomi.charge.course.model.entity.CourseEntity;
 import vn.com.atomi.charge.course.model.enums.CourseStatus;
 
 import java.util.Optional;
+import java.util.List;
 
 public interface CourseRepository extends BaseRepository<CourseEntity, String> {
 
@@ -21,4 +22,6 @@ public interface CourseRepository extends BaseRepository<CourseEntity, String> {
     Page<CourseEntity> findByStatusAndDeletedAtIsNull(CourseStatus status, Pageable pageable);
 
     Page<CourseEntity> findByInstructorIdAndDeletedAtIsNull(String instructorId, Pageable pageable);
+
+    List<CourseEntity> findByInstructorIdAndDeletedAtIsNull(String instructorId);
 }

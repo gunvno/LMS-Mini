@@ -18,9 +18,11 @@ import vn.com.atomi.charge.base.model.response.BaseResponse;
 import vn.com.atomi.charge.base.service.BaseService;
 import vn.com.atomi.charge.base.util.StringUtil;
 import vn.com.atomi.charge.course.mapper.LessonMapper;
+import vn.com.atomi.charge.course.client.LearningClient;
 import vn.com.atomi.charge.course.model.dto.LessonDto;
 import vn.com.atomi.charge.course.model.entity.CourseEntity;
 import vn.com.atomi.charge.course.model.entity.LessonEntity;
+import vn.com.atomi.charge.course.model.enums.CourseStatus;
 import vn.com.atomi.charge.course.repository.CourseRepository;
 import vn.com.atomi.charge.course.repository.LessonRepository;
 import vn.com.atomi.charge.course.service.interfaces.CourseService;
@@ -39,17 +41,43 @@ public class LessonServiceImpl
     private CourseRepository courseRepository;
     @Autowired
     private CourseService courseService;
+    @Autowired
+    private LearningClient learningClient;
 
     @Override
     public BaseResponse<Page<LessonDto>> getAll(Map<String, String> params, Pageable pageable) {
-        if (!isInstructorRequest() || canReviewCourses()) {
+        if (canReviewCourses()) {
             return super.getAll(params, pageable);
+        }
+        if (!isInstructorRequest()) {
+            throw new AccessDeniedException("common.access_denied");
         }
         Sort sort = Sort.by(Sort.Direction.ASC, "orderIndex")
                 .and(Sort.by(Sort.Direction.ASC, "createdDate"));
         Pageable sorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
         return BaseResponse.success(HttpStatus.OK,
                 repository.findByInstructorId(currentUserId(), sorted).map(mapper::toDto));
+    }
+
+    @Override
+    public BaseResponse<LessonDto> getDetails(String id) {
+        LessonEntity lesson = repository.findEntityById(id)
+                .orElseThrow(() -> new AccessDeniedException("common.access_denied"));
+        LessonDto dto = mapper.toDto(lesson);
+        if (canReviewCourses()) {
+            dto.setLocked(false);
+        } else if (isInstructorRequest()) {
+            assertCanManageCourse(lesson.getCourseId());
+            dto.setLocked(false);
+        } else {
+            assertStudentCanAccessCourse(lesson.getCourseId());
+            List<String> accessibleLessonIds = learningClient.getAccessibleLessonIds(lesson.getCourseId());
+            if (accessibleLessonIds == null || !accessibleLessonIds.contains(lesson.getId())) {
+                throw new AccessDeniedException("common.access_denied");
+            }
+            dto.setLocked(false);
+        }
+        return BaseResponse.success(HttpStatus.OK, dto);
     }
 
     @Override
@@ -138,6 +166,7 @@ public class LessonServiceImpl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BaseResponse<LessonDto> createLesson(BaseRequest<LessonDto> dto, String courseId) {
+        assertCanManageCourse(courseId);
         response = new BaseResponse<>();
         try {
             getRequest();
@@ -153,8 +182,6 @@ public class LessonServiceImpl
             if(optionalCourse.isEmpty()){
                 return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("course.not_found"));
             }
-            assertCanManageCourse(courseId);
-
             LessonEntity saved = (LessonEntity) repository.save(mapper.toEntity(dto.getData()));
             syncCourseDuration(courseId);
             response.setStatus(HttpStatus.OK);
@@ -168,33 +195,46 @@ public class LessonServiceImpl
     }
     @Override
     public BaseResponse<Page<LessonDto>> getLessonByCourseId(String courseId, Pageable pageable) {
-        responsePage = new BaseResponse<>();
-        try {
-            if (!StringUtils.hasText(courseId)) {
-                return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("course.not_found"));
-            }
-
-            Optional<CourseEntity> optionalCourse = courseRepository.findEntityById(courseId);
-            if (optionalCourse.isEmpty()) {
-                return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("course.not_found"));
-            }
-            if (isInstructorRequest()) {
-                assertCanManageCourse(courseId);
-            }
-
-            Sort sort = Sort.by(Sort.Direction.ASC, "orderIndex")
-                .and(Sort.by(Sort.Direction.ASC, "createdDate"));
-            Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
-            Page<LessonEntity> lessons = repository.findByCourseIdAndDeletedAtIsNull(courseId, sortedPageable);
-
-            responsePage.setStatus(HttpStatus.OK);
-            responsePage.setData(lessons.map(mapper::toDto));
-        } catch (Exception ex) {
-            responsePage.setStatus(HttpStatus.BAD_REQUEST);
-            responsePage.setErrorCode(BaseErrorCode.FAILURE.getErrorCode());
-            responsePage.setMessage(StringUtil.beautyError(ex));
+        if (!StringUtils.hasText(courseId)) {
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("course.not_found"));
         }
-        return responsePage;
+
+        Optional<CourseEntity> optionalCourse = courseRepository.findEntityById(courseId);
+        if (optionalCourse.isEmpty()) {
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("course.not_found"));
+        }
+        boolean studentRequest = !isInstructorRequest() && !canReviewCourses();
+        List<String> accessibleLessonIds = List.of();
+        if (isInstructorRequest()) {
+            assertCanManageCourse(courseId);
+        } else if (studentRequest) {
+            assertPublishedCourse(courseId);
+            if (Boolean.TRUE.equals(learningClient.hasCourseAccess(courseId))) {
+                List<String> responseIds = learningClient.getAccessibleLessonIds(courseId);
+                accessibleLessonIds = responseIds == null ? List.of() : responseIds;
+            }
+        }
+
+        Sort sort = Sort.by(Sort.Direction.ASC, "orderIndex")
+                .and(Sort.by(Sort.Direction.ASC, "createdDate"));
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+        Page<LessonEntity> lessons = repository.findByCourseIdAndDeletedAtIsNull(courseId, sortedPageable);
+
+        Page<LessonDto> result = lessons.map(mapper::toDto);
+        if (studentRequest) {
+            List<String> finalAccessibleLessonIds = accessibleLessonIds;
+            result.forEach(dto -> {
+                boolean locked = !finalAccessibleLessonIds.contains(dto.getId());
+                dto.setLocked(locked);
+                if (locked) {
+                    dto.setContent(null);
+                    dto.setVideoUrl(null);
+                }
+            });
+        } else {
+            result.forEach(dto -> dto.setLocked(false));
+        }
+        return BaseResponse.success(HttpStatus.OK, result);
     }
     @Override
     public Boolean checkLesson(String lessonId){
@@ -261,6 +301,22 @@ public class LessonServiceImpl
                 ? courseRepository.findEntityById(courseId).orElse(null)
                 : null;
         if (course == null || !currentUserId().equals(course.getInstructorId())) {
+            throw new AccessDeniedException("common.access_denied");
+        }
+    }
+
+    private void assertStudentCanAccessCourse(String courseId) {
+        CourseEntity course = courseRepository.findEntityById(courseId).orElse(null);
+        if (course == null
+                || course.getStatus() != CourseStatus.PUBLISHED
+                || !Boolean.TRUE.equals(learningClient.hasCourseAccess(courseId))) {
+            throw new AccessDeniedException("common.access_denied");
+        }
+    }
+
+    private void assertPublishedCourse(String courseId) {
+        CourseEntity course = courseRepository.findEntityById(courseId).orElse(null);
+        if (course == null || course.getStatus() != CourseStatus.PUBLISHED) {
             throw new AccessDeniedException("common.access_denied");
         }
     }

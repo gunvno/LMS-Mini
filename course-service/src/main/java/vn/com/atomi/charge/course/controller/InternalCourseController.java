@@ -9,6 +9,8 @@ import vn.com.atomi.charge.course.service.interfaces.CourseService;
 import vn.com.atomi.charge.course.model.dto.CourseDto;
 import vn.com.atomi.charge.base.model.response.BaseResponse;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/internal/v1/courses")
 public class InternalCourseController {
@@ -37,6 +39,11 @@ public class InternalCourseController {
     @GetMapping("/{id}/instructors/{userId}/owner")
     public Boolean isInstructorOwner(@PathVariable String id, @PathVariable String userId) {
         return courseService.isInstructorOwner(id, userId);
+    }
+
+    @GetMapping("/instructors/{userId}/ids")
+    public List<String> getInstructorCourseIds(@PathVariable String userId) {
+        return courseService.getInstructorCourseIds(userId);
     }
 
 }

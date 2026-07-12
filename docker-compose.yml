@@ -346,6 +346,10 @@ services:
       PAYOS_RETURN_URL: ${PAYOS_RETURN_URL:-http://localhost:3001/payment/success}
       PAYOS_CANCEL_URL: ${PAYOS_CANCEL_URL:-http://localhost:3001/payment/cancel}
       INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-lms-mini-internal-change-me}
+      CONFIG_MINIO_URL: http://minio:9000
+      CONFIG_MINIO_ACCESS_KEY: ${CONFIG_MINIO_ACCESS_KEY:-minioadmin}
+      CONFIG_MINIO_SECRET_KEY: ${CONFIG_MINIO_SECRET_KEY:-minioadmin}
+      CONFIG_MINIO_BUCKET: lms-mini
     ports:
       - "8087:8087"
     volumes:
@@ -372,6 +376,10 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-lms-mini-internal-change-me}
+      CONFIG_MINIO_URL: http://minio:9000
+      CONFIG_MINIO_ACCESS_KEY: ${CONFIG_MINIO_ACCESS_KEY:-minioadmin}
+      CONFIG_MINIO_SECRET_KEY: ${CONFIG_MINIO_SECRET_KEY:-minioadmin}
+      CONFIG_MINIO_BUCKET: lms-mini
     ports:
       - "8088:8088"
     volumes:

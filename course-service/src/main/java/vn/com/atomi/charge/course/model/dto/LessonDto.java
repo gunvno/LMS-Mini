@@ -39,4 +39,7 @@ public class LessonDto extends BaseDto<String> {
     @NotNull(groups = Create.class)
     @Schema(example = "ACTIVE", allowableValues = {"DRAFT", "ACTIVE", "INACTIVE", "ARCHIVED"})
     private LessonStatus status;
+
+    @Schema(description = "Whether the current student must complete the previous lesson first")
+    private Boolean locked;
 }

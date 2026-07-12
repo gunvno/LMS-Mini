@@ -10,6 +10,8 @@ import vn.com.atomi.charge.course.model.entity.CourseEntity;
 import vn.com.atomi.charge.course.model.request.RejectCourseRequest;
 import vn.com.atomi.charge.course.repository.CourseRepository;
 
+import java.util.List;
+
 public interface CourseService
     extends IBaseService<CourseRepository, CourseDto, CourseEntity, CourseMapper> {
 
@@ -20,6 +22,7 @@ public interface CourseService
     Boolean checkCourse(String courseId);
     Boolean checkPublishedCourse(String courseId);
     Boolean isInstructorOwner(String courseId, String userId);
+    List<String> getInstructorCourseIds(String userId);
     BaseResponse<Page<CourseDto>> getPublishedCourses(Pageable pageable);
     BaseResponse<CourseDto> getPublishedCourseDetails(String id);
 }
