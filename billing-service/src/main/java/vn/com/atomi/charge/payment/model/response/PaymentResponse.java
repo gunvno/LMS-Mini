@@ -1,4 +1,4 @@
-package vn.com.atomi.charge.payment.model.dto;
+package vn.com.atomi.charge.payment.model.response;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 
 @Getter
 @Setter
-public class PaymentDto extends BaseDto<String> {
+public class PaymentResponse extends BaseDto<String> {
     private String userId;
     private String courseId;
     private BigDecimal amount;
@@ -25,10 +25,7 @@ public class PaymentDto extends BaseDto<String> {
     private LocalDateTime invoiceIssuedAt;
     private PaymentStatus status;
     private LocalDateTime paidAt;
-    /** Creation timestamp for payment history and dashboard tables. */
     private LocalDateTime createdDate;
-    /** Backward-compatible alias for clients that use camel-case `createdAt`. */
     private LocalDateTime createdAt;
-    /** Always populated: paidAt for completed payments, otherwise createdDate. */
     private LocalDateTime displayDate;
 }

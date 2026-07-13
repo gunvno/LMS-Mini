@@ -138,6 +138,8 @@ Gateway prefix: `/course`.
 | POST | `/course/api/v1/lesson-resources/{id}` | `/api/v1/lesson-resources/{id}` | Cập nhật tài nguyên |
 | DELETE | `/course/api/v1/lesson-resources/{id}` | `/api/v1/lesson-resources/{id}` | Xóa mềm tài nguyên |
 | DELETE | `/course/api/v1/lesson-resources` | `/api/v1/lesson-resources` | Xóa mềm nhiều tài nguyên |
+| GET | `/course/api/v1/lesson-resources/{id}/view` | `/api/v1/lesson-resources/{id}/view` | Xem nội dung tài nguyên |
+| GET | `/course/api/v1/lesson-resources/{id}/download` | `/api/v1/lesson-resources/{id}/download` | Tải tài nguyên |
 
 ## Course Service - Image
 

@@ -10,4 +10,4 @@ lesson_resource:
   title_required: "ກະລຸນາປ້ອນຊື່ຊັບພະຍາກອນ"
   file_or_url_required: "ກະລຸນາອັບໂຫຼດໄຟລ໌ ຫຼື ປ້ອນລິ້ງຊັບພະຍາກອນ"
   only_one_source_allowed: "ກະລຸນາເລືອກອັບໂຫຼດໄຟລ໌ ຫຼື ປ້ອນລິ້ງ ຢ່າງໃດຢ່າງໜຶ່ງເທົ່ານັ້ນ"
-  invalid_content_type: "ໄຟລ໌ຊັບພະຍາກອນຮອງຮັບສະເພາະ PDF ຫຼື DOCX"
+  invalid_content_type: "ໄຟລ໌ຊັບພະຍາກອນຮອງຮັບ PDF, DOC, DOCX, MP4, WebM, MOV ຫຼື MKV"

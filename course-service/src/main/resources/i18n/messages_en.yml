@@ -10,4 +10,4 @@ lesson_resource:
   title_required: "Please enter resource title"
   file_or_url_required: "Please upload a file or enter a resource URL"
   only_one_source_allowed: "Please upload a file or enter a URL, not both"
-  invalid_content_type: "Lesson resource file only supports PDF or DOCX"
+  invalid_content_type: "Lesson resource only supports PDF, DOC, DOCX, MP4, WebM, MOV or MKV files"

@@ -10,9 +10,9 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import vn.com.atomi.charge.base.model.exception.BusinessException;
 import vn.com.atomi.charge.payment.config.PayosProperties;
-import vn.com.atomi.charge.payment.model.dto.PayosApiResponse;
-import vn.com.atomi.charge.payment.model.dto.PayosPaymentLinkResponse;
-import vn.com.atomi.charge.payment.model.dto.PayosWebhookRequest;
+import vn.com.atomi.charge.payment.model.request.PayosWebhookRequest;
+import vn.com.atomi.charge.payment.model.response.PayosApiResponse;
+import vn.com.atomi.charge.payment.model.response.PayosPaymentLinkResponse;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -104,6 +104,37 @@ public class PayosClient {
         } catch (RestClientException exception) {
             log.warn("PayOS get payment request failed. orderCode={}, error={}", orderCode, exception.getMessage());
             throw new BusinessException("PAYOS_PAYMENT_LOOKUP_FAILED", "payos.payment_lookup_failed");
+        }
+    }
+
+    public PayosPaymentLinkResponse cancelPaymentLink(Long orderCode, String cancellationReason) {
+        if (!configured()) {
+            throw new BusinessException("PAYOS_NOT_CONFIGURED", "payos.not_configured");
+        }
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("cancellationReason", cancellationReason);
+        try {
+            PayosApiResponse<PayosPaymentLinkResponse> response = restClientBuilder.build()
+                    .post()
+                    .uri(payosProperties.baseUrl() + "/v2/payment-requests/" + orderCode + "/cancel")
+                    .header("x-client-id", payosProperties.clientId())
+                    .header("x-api-key", payosProperties.apiKey())
+                    .body(body)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<>() {
+                    });
+            if (response == null || !"00".equals(response.getCode()) || response.getData() == null) {
+                throw new BusinessException("PAYOS_CANCEL_FAILED", "payos.cancel_failed");
+            }
+            return response.getData();
+        } catch (RestClientResponseException exception) {
+            log.warn("PayOS cancel payment HTTP failed. orderCode={}, status={}, body={}",
+                    orderCode, exception.getStatusCode(), exception.getResponseBodyAsString());
+            throw new BusinessException("PAYOS_CANCEL_FAILED", "payos.cancel_failed");
+        } catch (RestClientException exception) {
+            log.warn("PayOS cancel payment request failed. orderCode={}, error={}", orderCode, exception.getMessage());
+            throw new BusinessException("PAYOS_CANCEL_FAILED", "payos.cancel_failed");
         }
     }
 

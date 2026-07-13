@@ -5,6 +5,8 @@ import io.minio.GetObjectArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
+import io.minio.StatObjectArgs;
+import io.minio.StatObjectResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -63,6 +65,12 @@ public class MinioStorageServiceImpl implements StorageService {
     @Override
     public StorageFile download(String filePath) {
         try {
+            StatObjectResponse metadata = minioClient.statObject(
+                StatObjectArgs.builder()
+                    .bucket(properties.getBucket())
+                    .object(filePath)
+                    .build()
+            );
             byte[] content = minioClient.getObject(
                 GetObjectArgs.builder()
                     .bucket(properties.getBucket())
@@ -70,7 +78,7 @@ public class MinioStorageServiceImpl implements StorageService {
                     .build()
             ).readAllBytes();
 
-            return new StorageFile(content, null);
+            return new StorageFile(content, metadata.contentType());
         } catch (Exception ex) {
             throw new RuntimeException("Download file from MinIO failed", ex);
         }

@@ -1,6 +1,7 @@
 package vn.com.atomi.charge.course.service.interfaces;
 
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.ResponseEntity;
 import vn.com.atomi.charge.base.model.response.BaseResponse;
 import vn.com.atomi.charge.base.service.IBaseService;
 import vn.com.atomi.charge.course.mapper.LessonResourceMapper;
@@ -20,4 +21,6 @@ public interface LessonResourceService extends IBaseService<
         String title,
         String externalUrl
     );
+
+    ResponseEntity<byte[]> viewLessonResource(String id, boolean attachment);
 }

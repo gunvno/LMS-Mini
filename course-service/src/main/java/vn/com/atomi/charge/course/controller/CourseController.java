@@ -43,8 +43,10 @@ public class CourseController extends BaseController<CourseService, CourseDto> {
 
     @GetMapping("/published")
     @PreAuthorize("permitAll()")
-    public ResponseEntity<?> getPublishedCourses(Pageable pageable) {
-        return ResponseEntity.ok(service.getPublishedCourses(pageable));
+    public ResponseEntity<?> getPublishedCourses(
+            @RequestParam(required = false) String categoryId,
+            Pageable pageable) {
+        return ResponseEntity.ok(service.getPublishedCourses(categoryId, pageable));
     }
 
     @Override

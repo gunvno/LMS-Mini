@@ -5,7 +5,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import vn.com.atomi.charge.base.model.response.BaseResponse;
-import vn.com.atomi.charge.payment.model.dto.InvoiceCreateRequest;
+import vn.com.atomi.charge.payment.model.request.InvoiceCreateRequest;
 
 @FeignClient(name = "lms-invoice-service")
 public interface InvoiceClient {

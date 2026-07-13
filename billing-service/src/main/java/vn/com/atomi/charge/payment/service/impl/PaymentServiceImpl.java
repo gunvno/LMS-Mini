@@ -19,13 +19,13 @@ import vn.com.atomi.charge.payment.client.InvoiceClient;
 import vn.com.atomi.charge.payment.client.LearningClient;
 import vn.com.atomi.charge.payment.client.PayosClient;
 import vn.com.atomi.charge.payment.model.dto.CourseDto;
-import vn.com.atomi.charge.payment.model.dto.CreateCoursePaymentRequest;
-import vn.com.atomi.charge.payment.model.dto.InvoiceCreateRequest;
-import vn.com.atomi.charge.payment.model.dto.PaymentDto;
-import vn.com.atomi.charge.payment.model.dto.PayosPaymentLinkResponse;
-import vn.com.atomi.charge.payment.model.dto.PayosWebhookRequest;
 import vn.com.atomi.charge.payment.model.entity.PaymentEntity;
 import vn.com.atomi.charge.payment.model.enums.PaymentStatus;
+import vn.com.atomi.charge.payment.model.request.CreateCoursePaymentRequest;
+import vn.com.atomi.charge.payment.model.request.InvoiceCreateRequest;
+import vn.com.atomi.charge.payment.model.request.PayosWebhookRequest;
+import vn.com.atomi.charge.payment.model.response.PaymentResponse;
+import vn.com.atomi.charge.payment.model.response.PayosPaymentLinkResponse;
 import vn.com.atomi.charge.payment.repository.PaymentRepository;
 import vn.com.atomi.charge.payment.service.interfaces.PaymentService;
 
@@ -57,7 +57,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public BaseResponse<PaymentDto> createCoursePayment(BaseRequest<CreateCoursePaymentRequest> request) {
+    public BaseResponse<PaymentResponse> createCoursePayment(BaseRequest<CreateCoursePaymentRequest> request) {
         String userId = currentUserId();
         if (!StringUtils.hasText(userId)) {
             return BaseResponse.fail(HttpStatus.UNAUTHORIZED, "user.not_found");
@@ -79,7 +79,7 @@ public class PaymentServiceImpl implements PaymentService {
             if (!provisionPaidCourse(payment)) {
                 return BaseResponse.fail(HttpStatus.SERVICE_UNAVAILABLE, "payment.enrollment_pending");
             }
-            return BaseResponse.success(HttpStatus.OK, toDto(payment));
+            return BaseResponse.success(HttpStatus.OK, toResponse(payment));
         }
 
         Optional<PaymentEntity> paid = paymentRepository
@@ -89,7 +89,7 @@ public class PaymentServiceImpl implements PaymentService {
             if (!provisionPaidCourse(paid.get())) {
                 return BaseResponse.fail(HttpStatus.SERVICE_UNAVAILABLE, "payment.enrollment_pending");
             }
-            return BaseResponse.success(HttpStatus.OK, toDto(paid.get()));
+            return BaseResponse.success(HttpStatus.OK, toResponse(paid.get()));
         }
 
         Optional<PaymentEntity> pending = paymentRepository
@@ -99,7 +99,7 @@ public class PaymentServiceImpl implements PaymentService {
             PaymentEntity existingPending = expireIfNeeded(pending.get());
             if (existingPending.getStatus() == PaymentStatus.PENDING
                     && StringUtils.hasText(existingPending.getProviderCheckoutUrl())) {
-                return BaseResponse.success(HttpStatus.OK, toDto(existingPending));
+                return BaseResponse.success(HttpStatus.OK, toResponse(existingPending));
             }
         }
         if (!payosClient.configured()) {
@@ -128,49 +128,53 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setProviderCheckoutUrl(link.getCheckoutUrl());
         payment.setProviderQrCode(link.getQrCode());
 
-        return BaseResponse.success(HttpStatus.OK, toDto(paymentRepository.save(payment)));
+        return BaseResponse.success(HttpStatus.OK, toResponse(paymentRepository.save(payment)));
     }
 
     @Override
-    public BaseResponse<Page<PaymentDto>> getMyPayments(Pageable pageable) {
+    @Transactional(rollbackFor = Exception.class)
+    public BaseResponse<Page<PaymentResponse>> getMyPayments(Pageable pageable) {
         String userId = currentUserId();
         if (!StringUtils.hasText(userId)) {
             return BaseResponse.fail(HttpStatus.UNAUTHORIZED, "user.not_found");
         }
+        expirePendingPayments();
         return BaseResponse.success(HttpStatus.OK,
-                paymentRepository.findByUserIdAndDeletedAtIsNull(userId, pageable).map(this::toDto));
+                paymentRepository.findByUserIdAndDeletedAtIsNull(userId, pageable).map(this::toResponse));
     }
 
     @Override
-    public BaseResponse<Page<PaymentDto>> getAllPayments(Pageable pageable) {
+    @Transactional(rollbackFor = Exception.class)
+    public BaseResponse<Page<PaymentResponse>> getAllPayments(Pageable pageable) {
+        expirePendingPayments();
         return BaseResponse.success(HttpStatus.OK,
-                paymentRepository.getAll(pageable).map(this::toDto));
+                paymentRepository.getAll(pageable).map(this::toResponse));
     }
 
     @Override
-    public BaseResponse<PaymentDto> getPayment(String id) {
+    public BaseResponse<PaymentResponse> getPayment(String id) {
         String userId = currentUserId();
         Optional<PaymentEntity> payment = paymentRepository.findEntityById(id)
                 .filter(item -> item.getUserId().equals(userId));
         return payment
-                .map(entity -> BaseResponse.success(HttpStatus.OK, toDto(entity)))
+                .map(entity -> BaseResponse.success(HttpStatus.OK, toResponse(entity)))
                 .orElseGet(() -> BaseResponse.fail(HttpStatus.BAD_REQUEST, "payment.not_found"));
     }
 
     @Override
-    public BaseResponse<PaymentDto> getMyPaymentByOrderCode(Long orderCode) {
+    public BaseResponse<PaymentResponse> getMyPaymentByOrderCode(Long orderCode) {
         String userId = currentUserId();
         if (!StringUtils.hasText(userId) || orderCode == null) {
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, "payment.not_found");
         }
         return paymentRepository.findFirstByUserIdAndProviderOrderCodeAndDeletedAtIsNull(userId, orderCode)
-                .map(entity -> BaseResponse.success(HttpStatus.OK, toDto(entity)))
+                .map(entity -> BaseResponse.success(HttpStatus.OK, toResponse(entity)))
                 .orElseGet(() -> BaseResponse.fail(HttpStatus.BAD_REQUEST, "payment.not_found"));
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public BaseResponse<PaymentDto> syncMyPaymentByOrderCode(Long orderCode) {
+    public BaseResponse<PaymentResponse> syncMyPaymentByOrderCode(Long orderCode) {
         String userId = currentUserId();
         if (!StringUtils.hasText(userId) || orderCode == null) {
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, "payment.not_found");
@@ -195,12 +199,43 @@ public class PaymentServiceImpl implements PaymentService {
         if (payment.getStatus() == PaymentStatus.PAID && !provisionPaidCourse(payment)) {
             return BaseResponse.fail(HttpStatus.SERVICE_UNAVAILABLE, "payment.enrollment_pending");
         }
-        return BaseResponse.success(HttpStatus.OK, toDto(payment));
+        return BaseResponse.success(HttpStatus.OK, toResponse(payment));
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public BaseResponse<PaymentDto> handlePayosWebhook(PayosWebhookRequest request) {
+    public BaseResponse<PaymentResponse> cancelMyPaymentByOrderCode(Long orderCode) {
+        String userId = currentUserId();
+        if (!StringUtils.hasText(userId) || orderCode == null) {
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, "payment.not_found");
+        }
+
+        PaymentEntity payment = paymentRepository
+                .findFirstByUserIdAndProviderOrderCodeAndDeletedAtIsNull(userId, orderCode)
+                .orElse(null);
+        if (payment == null) {
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, "payment.not_found");
+        }
+
+        payment = expireIfNeeded(payment);
+        if (payment.getStatus() == PaymentStatus.CANCELLED) {
+            return BaseResponse.success(HttpStatus.OK, toResponse(payment));
+        }
+        if (payment.getStatus() != PaymentStatus.PENDING) {
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, "payment.cannot_cancel");
+        }
+
+        if (PROVIDER_PAYOS.equalsIgnoreCase(payment.getProvider())) {
+            payosClient.cancelPaymentLink(orderCode, "User requested cancellation");
+        }
+        payment.setStatus(PaymentStatus.CANCELLED);
+        payment.setRawWebhook("cancelled-by-user");
+        return BaseResponse.success(HttpStatus.OK, toResponse(paymentRepository.save(payment)));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BaseResponse<PaymentResponse> handlePayosWebhook(PayosWebhookRequest request) {
         if (!payosClient.verifyWebhook(request)) {
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, "payos.invalid_webhook");
         }
@@ -218,11 +253,11 @@ public class PaymentServiceImpl implements PaymentService {
         payment = expireIfNeeded(payment);
         if (payment.getStatus() == PaymentStatus.EXPIRED) {
             // Return 200 to PayOS so a late webhook is not retried indefinitely.
-            return BaseResponse.success(HttpStatus.OK, toDto(payment));
+            return BaseResponse.success(HttpStatus.OK, toResponse(payment));
         }
         if (payment.getStatus() == PaymentStatus.PAID) {
             provisionPaidCourse(payment);
-            return BaseResponse.success(HttpStatus.OK, toDto(payment));
+            return BaseResponse.success(HttpStatus.OK, toResponse(payment));
         }
 
         Long amountValue = asLong(request.getData().get("amount"));
@@ -241,7 +276,7 @@ public class PaymentServiceImpl implements PaymentService {
         PaymentEntity saved = markPaid(payment, "webhook");
         provisionPaidCourse(saved);
 
-        return BaseResponse.success(HttpStatus.OK, toDto(saved));
+        return BaseResponse.success(HttpStatus.OK, toResponse(saved));
     }
 
     private PaymentEntity markPaid(PaymentEntity payment, String source) {
@@ -264,6 +299,17 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setStatus(PaymentStatus.EXPIRED);
         payment.setRawWebhook("expired-after-24-hours");
         return paymentRepository.save(payment);
+    }
+
+    private int expirePendingPayments() {
+        LocalDateTime now = LocalDateTime.now();
+        return paymentRepository.expirePendingPayments(
+                PaymentStatus.PENDING,
+                PaymentStatus.EXPIRED,
+                now.minusHours(PAYMENT_EXPIRY_HOURS),
+                now,
+                "expired-after-24-hours"
+        );
     }
 
     private boolean provisionPaidCourse(PaymentEntity payment) {
@@ -329,27 +375,27 @@ public class PaymentServiceImpl implements PaymentService {
         return authentication == null ? null : authentication.getName();
     }
 
-    private PaymentDto toDto(PaymentEntity entity) {
-        PaymentDto dto = new PaymentDto();
-        dto.setId(entity.getId());
-        dto.setUserId(entity.getUserId());
-        dto.setCourseId(entity.getCourseId());
-        dto.setAmount(entity.getAmount());
-        dto.setProvider(entity.getProvider());
-        dto.setProviderOrderCode(entity.getProviderOrderCode());
-        dto.setProviderPaymentLinkId(entity.getProviderPaymentLinkId());
-        dto.setProviderCheckoutUrl(entity.getProviderCheckoutUrl());
-        dto.setProviderQrCode(entity.getProviderQrCode());
-        dto.setTransferContent(entity.getTransferContent());
-        dto.setProviderTransactionId(entity.getProviderTransactionId());
-        dto.setInvoiceCode(entity.getInvoiceCode());
-        dto.setInvoiceIssuedAt(entity.getInvoiceIssuedAt());
-        dto.setStatus(entity.getStatus());
-        dto.setPaidAt(entity.getPaidAt());
-        dto.setCreatedDate(entity.getCreatedDate());
-        dto.setCreatedAt(entity.getCreatedDate());
-        dto.setDisplayDate(entity.getPaidAt() == null ? entity.getCreatedDate() : entity.getPaidAt());
-        return dto;
+    private PaymentResponse toResponse(PaymentEntity entity) {
+        PaymentResponse response = new PaymentResponse();
+        response.setId(entity.getId());
+        response.setUserId(entity.getUserId());
+        response.setCourseId(entity.getCourseId());
+        response.setAmount(entity.getAmount());
+        response.setProvider(entity.getProvider());
+        response.setProviderOrderCode(entity.getProviderOrderCode());
+        response.setProviderPaymentLinkId(entity.getProviderPaymentLinkId());
+        response.setProviderCheckoutUrl(entity.getProviderCheckoutUrl());
+        response.setProviderQrCode(entity.getProviderQrCode());
+        response.setTransferContent(entity.getTransferContent());
+        response.setProviderTransactionId(entity.getProviderTransactionId());
+        response.setInvoiceCode(entity.getInvoiceCode());
+        response.setInvoiceIssuedAt(entity.getInvoiceIssuedAt());
+        response.setStatus(entity.getStatus());
+        response.setPaidAt(entity.getPaidAt());
+        response.setCreatedDate(entity.getCreatedDate());
+        response.setCreatedAt(entity.getCreatedDate());
+        response.setDisplayDate(entity.getPaidAt() == null ? entity.getCreatedDate() : entity.getPaidAt());
+        return response;
     }
 
     private void createInvoice(PaymentEntity payment) {

@@ -27,7 +27,7 @@ public class LessonResourceUploadController {
 
     @PostMapping(value = "/{id}/resources", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAuthority('RESOURCE_MANAGE')")
-    @Operation(summary = "Upload lesson resource", description = "Upload PDF/DOCX file or save an external resource URL")
+    @Operation(summary = "Upload lesson resource", description = "Upload PDF/DOC/DOCX/video file or save an external resource URL")
     public BaseResponse<LessonResourceDto> uploadLessonResource(
         @PathVariable String id,
         @RequestParam(required = false) MultipartFile file,

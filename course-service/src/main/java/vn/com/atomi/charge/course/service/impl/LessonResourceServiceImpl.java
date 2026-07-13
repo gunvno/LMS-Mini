@@ -1,6 +1,9 @@
 package vn.com.atomi.charge.course.service.impl;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -9,6 +12,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
 import vn.com.atomi.charge.base.model.enums.BaseErrorCode;
 import vn.com.atomi.charge.base.model.response.BaseResponse;
@@ -23,6 +27,7 @@ import vn.com.atomi.charge.course.model.entity.LessonResourceEntity;
 import vn.com.atomi.charge.course.model.enums.LessonResourceStatus;
 import vn.com.atomi.charge.course.model.enums.LessonResourceType;
 import vn.com.atomi.charge.course.model.storage.StorageUploadResult;
+import vn.com.atomi.charge.course.model.storage.StorageFile;
 import vn.com.atomi.charge.course.repository.LessonRepository;
 import vn.com.atomi.charge.course.repository.LessonResourceRepository;
 import vn.com.atomi.charge.course.repository.CourseRepository;
@@ -32,6 +37,7 @@ import vn.com.atomi.charge.course.service.interfaces.StorageService;
 import java.util.Map;
 import java.util.Set;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class LessonResourceServiceImpl
@@ -45,13 +51,31 @@ public class LessonResourceServiceImpl
     private static final Set<String> SUPPORTED_FILE_TYPES = Set.of(
         "application/pdf",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "application/msword"
+        "application/msword",
+        "video/mp4",
+        "video/webm",
+        "video/quicktime",
+        "video/x-matroska"
     );
 
     private static final Map<String, LessonResourceType> RESOURCE_TYPE_BY_CONTENT_TYPE = Map.of(
         "application/pdf", LessonResourceType.PDF,
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document", LessonResourceType.DOCX,
-        "application/msword", LessonResourceType.DOCX
+        "application/msword", LessonResourceType.DOCX,
+        "video/mp4", LessonResourceType.VIDEO,
+        "video/webm", LessonResourceType.VIDEO,
+        "video/quicktime", LessonResourceType.VIDEO,
+        "video/x-matroska", LessonResourceType.VIDEO
+    );
+
+    private static final Map<String, LessonResourceType> RESOURCE_TYPE_BY_EXTENSION = Map.of(
+        "pdf", LessonResourceType.PDF,
+        "doc", LessonResourceType.DOCX,
+        "docx", LessonResourceType.DOCX,
+        "mp4", LessonResourceType.VIDEO,
+        "webm", LessonResourceType.VIDEO,
+        "mov", LessonResourceType.VIDEO,
+        "mkv", LessonResourceType.VIDEO
     );
 
     private final LessonRepository lessonRepository;
@@ -75,6 +99,13 @@ public class LessonResourceServiceImpl
             return super.getAll(params, pageable);
         }
         if (isInstructorRequest()) {
+            String lessonId = params == null ? null : params.get("lessonId");
+            if (StringUtils.hasText(lessonId)) {
+                assertCanManageLesson(lessonId);
+                return BaseResponse.success(HttpStatus.OK,
+                        repository.findByInstructorIdAndLessonId(
+                                currentUserId(), lessonId, pageable).map(mapper::toDto));
+            }
             return BaseResponse.success(HttpStatus.OK,
                     repository.findByInstructorId(currentUserId(), pageable).map(mapper::toDto));
         }
@@ -180,6 +211,31 @@ public class LessonResourceServiceImpl
         return response;
     }
 
+    @Override
+    public ResponseEntity<byte[]> viewLessonResource(String id, boolean attachment) {
+        LessonResourceEntity resource = repository.findEntityById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        assertCanViewResource(resource);
+
+        if (!StringUtils.hasText(resource.getFilePath())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                i18n.getMessage("lesson_resource.file_or_url_required"));
+        }
+
+        StorageFile file = storageService.download(resource.getFilePath());
+        String contentType = StringUtils.hasText(file.contentType())
+            ? file.contentType()
+            : MediaType.APPLICATION_OCTET_STREAM_VALUE;
+        String disposition = attachment ? "attachment" : "inline";
+        String fileName = fileName(resource.getFilePath(), resource.getTitle());
+
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType(contentType))
+            .header(HttpHeaders.CONTENT_DISPOSITION,
+                disposition + "; filename=\"" + sanitizeFileName(fileName) + "\"")
+            .body(file.content());
+    }
+
     private void assertStudentCanAccessLesson(String lessonId) {
         LessonEntity lesson = StringUtils.hasText(lessonId)
                 ? lessonRepository.findEntityById(lessonId).orElse(null)
@@ -236,7 +292,8 @@ public class LessonResourceServiceImpl
 
     private LessonResourceEntity buildFileResource(String lessonId, MultipartFile file, String title) {
         String contentType = file.getContentType();
-        if (!SUPPORTED_FILE_TYPES.contains(contentType)) {
+        LessonResourceType resourceType = resolveResourceType(contentType, file.getOriginalFilename());
+        if (resourceType == null) {
             throw new IllegalArgumentException(i18n.getMessage("lesson_resource.invalid_content_type"));
         }
 
@@ -244,10 +301,50 @@ public class LessonResourceServiceImpl
         return LessonResourceEntity.builder()
             .lessonId(lessonId)
             .title(title)
-            .resourceType(RESOURCE_TYPE_BY_CONTENT_TYPE.get(contentType))
+            .resourceType(resourceType)
             .filePath(uploaded.filePath())
             .status(LessonResourceStatus.ACTIVE)
             .build();
+    }
+
+    private LessonResourceType resolveResourceType(String contentType, String originalFilename) {
+        if (StringUtils.hasText(contentType) && SUPPORTED_FILE_TYPES.contains(contentType)) {
+            return RESOURCE_TYPE_BY_CONTENT_TYPE.get(contentType);
+        }
+        if (!StringUtils.hasText(originalFilename) || !originalFilename.contains(".")) {
+            return null;
+        }
+        String extension = originalFilename.substring(originalFilename.lastIndexOf('.') + 1)
+            .toLowerCase(Locale.ROOT);
+        return RESOURCE_TYPE_BY_EXTENSION.get(extension);
+    }
+
+    private void assertCanViewResource(LessonResourceEntity resource) {
+        if (canReviewCourses()) {
+            return;
+        }
+        if (isInstructorRequest()) {
+            assertCanManageLesson(resource.getLessonId());
+            return;
+        }
+        if (resource.getStatus() != LessonResourceStatus.ACTIVE) {
+            throw new AccessDeniedException("common.access_denied");
+        }
+        assertStudentCanAccessLesson(resource.getLessonId());
+    }
+
+    private String fileName(String filePath, String fallback) {
+        int separator = filePath.lastIndexOf('/');
+        String storedName = separator >= 0 ? filePath.substring(separator + 1) : filePath;
+        int uuidSeparator = storedName.indexOf('-');
+        return uuidSeparator >= 0 && uuidSeparator + 1 < storedName.length()
+            ? storedName.substring(uuidSeparator + 1)
+            : (StringUtils.hasText(storedName) ? storedName : fallback);
+    }
+
+    private String sanitizeFileName(String value) {
+        String safe = StringUtils.hasText(value) ? value : "resource";
+        return safe.replaceAll("[\\r\\n\\\"]", "_");
     }
 
     private LessonResourceEntity buildLinkResource(String lessonId, String title, String externalUrl) {

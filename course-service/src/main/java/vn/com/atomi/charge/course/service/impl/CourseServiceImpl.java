@@ -292,8 +292,11 @@ public class CourseServiceImpl
     }
 
     @Override
-    public BaseResponse<Page<CourseDto>> getPublishedCourses(Pageable pageable) {
-        Page<CourseEntity> courses = repository.findByStatusAndDeletedAtIsNull(CourseStatus.PUBLISHED, pageable);
+    public BaseResponse<Page<CourseDto>> getPublishedCourses(String categoryId, Pageable pageable) {
+        Page<CourseEntity> courses = StringUtils.hasText(categoryId)
+                ? repository.findByStatusAndCategoryIdAndDeletedAtIsNull(
+                        CourseStatus.PUBLISHED, categoryId, pageable)
+                : repository.findByStatusAndDeletedAtIsNull(CourseStatus.PUBLISHED, pageable);
         return BaseResponse.success(HttpStatus.OK, courses.map(mapper::toDto));
     }
 

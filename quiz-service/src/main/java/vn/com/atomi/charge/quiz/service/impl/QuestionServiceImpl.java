@@ -63,6 +63,7 @@ implements QuestionService {
             getRequest();
 
             dto.getData().setQuizId(QuizId);
+            dto.getData().setOrderIndex(nextOrderIndex(QuizId));
 
             if (isDuplicate(dto)) {
                 String localizedMsg = i18n.getMessage("common.already_exists");
@@ -82,6 +83,17 @@ implements QuestionService {
             response.setMessage(StringUtil.beautyError(ex));
         }
         return response;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BaseResponse<QuestionDto> create(BaseRequest<QuestionDto> request) {
+        String quizId = request.getData().getQuizId();
+        QuizEntity quiz = quizRepository.findEntityById(quizId)
+                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied"));
+        ownershipService.assertCanManageCourse(quiz.getCourseId());
+        request.getData().setOrderIndex(nextOrderIndex(quizId));
+        return super.create(request);
     }
     @Override
     protected boolean isDuplicate(BaseRequest<QuestionDto> request) {
@@ -111,35 +123,65 @@ implements QuestionService {
         QuestionEntity question = repository.findEntityById(request.getData().getId())
                 .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied"));
         assertCanManageQuestion(question);
-        if (request.getData().getQuizId() != null) {
-            QuizEntity targetQuiz = quizRepository.findEntityById(request.getData().getQuizId())
-                    .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied"));
-            ownershipService.assertCanManageCourse(targetQuiz.getCourseId());
-        }
+        request.getData().setQuizId(question.getQuizId());
+        request.getData().setOrderIndex(question.getOrderIndex());
         return super.update(request);
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public BaseResponse<QuestionDto> delete(String id) {
         QuestionEntity question = repository.findEntityById(id)
                 .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied"));
         assertCanManageQuestion(question);
-        return super.delete(id);
+        BaseResponse<QuestionDto> result = super.delete(id);
+        normalizeQuestionOrder(question.getQuizId());
+        return result;
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public BaseResponse<QuestionDto> delete(List<String> ids) {
-        ids.stream()
+        List<QuestionEntity> questions = ids.stream()
                 .map(id -> repository.findEntityById(id)
                         .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied")))
-                .forEach(this::assertCanManageQuestion);
-        return super.delete(ids);
+                .toList();
+        questions.forEach(this::assertCanManageQuestion);
+        BaseResponse<QuestionDto> result = super.delete(ids);
+        questions.stream()
+                .map(QuestionEntity::getQuizId)
+                .distinct()
+                .forEach(this::normalizeQuestionOrder);
+        return result;
     }
 
     private void assertCanManageQuestion(QuestionEntity question) {
         QuizEntity quiz = quizRepository.findEntityById(question.getQuizId())
                 .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied"));
         ownershipService.assertCanManageCourse(quiz.getCourseId());
+    }
+
+    private int nextOrderIndex(String quizId) {
+        normalizeQuestionOrder(quizId);
+        return Math.toIntExact(repository.countByQuizIdAndDeletedAtIsNull(quizId)) + 1;
+    }
+
+    private int normalizeQuestionOrder(String quizId) {
+        List<QuestionEntity> questions = repository
+                .findByQuizIdAndDeletedAtIsNullOrderByOrderIndexAscCreatedDateAsc(quizId);
+        boolean changed = false;
+        for (int index = 0; index < questions.size(); index++) {
+            int expectedOrder = index + 1;
+            QuestionEntity question = questions.get(index);
+            if (question.getOrderIndex() == null || question.getOrderIndex() != expectedOrder) {
+                question.setOrderIndex(expectedOrder);
+                changed = true;
+            }
+        }
+        if (changed) {
+            repository.saveAll(questions);
+        }
+        return questions.size();
     }
 
     private void assertCanViewQuestion(QuestionEntity question) {

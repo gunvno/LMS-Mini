@@ -24,4 +24,19 @@ public interface LessonResourceRepository extends BaseRepository<LessonResourceE
             """)
     Page<LessonResourceEntity> findByInstructorId(
             @Param("instructorId") String instructorId, Pageable pageable);
+
+    @Query("""
+            select r from LessonResourceEntity r, LessonEntity l, CourseEntity c
+            where r.lessonId = l.id
+              and l.courseId = c.id
+              and c.instructorId = :instructorId
+              and r.lessonId = :lessonId
+              and r.deletedAt is null
+              and l.deletedAt is null
+              and c.deletedAt is null
+            """)
+    Page<LessonResourceEntity> findByInstructorIdAndLessonId(
+            @Param("instructorId") String instructorId,
+            @Param("lessonId") String lessonId,
+            Pageable pageable);
 }

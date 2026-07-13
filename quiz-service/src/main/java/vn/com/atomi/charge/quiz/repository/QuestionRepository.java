@@ -11,4 +11,8 @@ public interface QuestionRepository extends BaseRepository<QuestionEntity, Strin
     boolean existsByQuizIdAndContentIgnoreCaseAndIdNotAndDeletedAtIsNull(String quizId, String content, String id);
 
     List<QuestionEntity> findByQuizIdAndDeletedAtIsNullOrderByOrderIndexAsc(String quizId);
+
+    List<QuestionEntity> findByQuizIdAndDeletedAtIsNullOrderByOrderIndexAscCreatedDateAsc(String quizId);
+
+    long countByQuizIdAndDeletedAtIsNull(String quizId);
 }

@@ -12,4 +12,4 @@ lesson_resource:
   title_required: "Vui lòng nhập tên tài nguyên"
   file_or_url_required: "Vui lòng upload file hoặc nhập link tài nguyên"
   only_one_source_allowed: "Chỉ được upload file hoặc nhập link, không dùng cả hai cùng lúc"
-  invalid_content_type: "File tài nguyên chỉ hỗ trợ PDF hoặc DOCX"
+  invalid_content_type: "File tài nguyên chỉ hỗ trợ PDF, DOC, DOCX, MP4, WebM, MOV hoặc MKV"

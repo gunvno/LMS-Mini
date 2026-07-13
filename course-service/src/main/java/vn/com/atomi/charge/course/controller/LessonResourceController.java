@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -77,5 +78,17 @@ public class LessonResourceController
     @PreAuthorize("hasAuthority('RESOURCE_MANAGE')")
     public ResponseEntity<?> deleteMany(@RequestBody List<String> ids) {
         return ResponseEntity.ok(service.delete(ids));
+    }
+
+    @GetMapping(value = "/{id}/view")
+    @PreAuthorize("hasAuthority('RESOURCE_VIEW')")
+    public ResponseEntity<byte[]> viewResource(@PathVariable String id) {
+        return service.viewLessonResource(id, false);
+    }
+
+    @GetMapping(value = "/{id}/download", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    @PreAuthorize("hasAuthority('RESOURCE_VIEW')")
+    public ResponseEntity<byte[]> downloadResource(@PathVariable String id) {
+        return service.viewLessonResource(id, true);
     }
 }

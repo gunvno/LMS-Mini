@@ -31,6 +31,12 @@ import java.util.Map;
 public class CourseCategoryController
     extends BaseController<CourseCategoryService, CourseCategoryDto> {
 
+    @GetMapping("/catalog")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getCatalogCategories() {
+        return ResponseEntity.ok(service.getCatalogCategories());
+    }
+
     @Override
     @GetMapping
     @PreAuthorize("hasAuthority('CATEGORY_VIEW')")

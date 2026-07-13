@@ -29,7 +29,6 @@ public class QuestionDto extends BaseDto<String> {
     @Schema(description = "Score of question", example = "0.5")
     private BigDecimal score;
 
-    @NotNull(groups = Create.class)
     @Schema(description = "Display order in quiz", example = "1")
     private Integer orderIndex;
 }

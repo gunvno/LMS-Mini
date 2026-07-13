@@ -11,8 +11,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.com.atomi.charge.base.model.request.BaseRequest;
-import vn.com.atomi.charge.payment.model.dto.CreateCoursePaymentRequest;
-import vn.com.atomi.charge.payment.model.dto.PayosWebhookRequest;
+import vn.com.atomi.charge.payment.model.request.CreateCoursePaymentRequest;
+import vn.com.atomi.charge.payment.model.request.PayosWebhookRequest;
 import vn.com.atomi.charge.payment.service.interfaces.PaymentService;
 
 @RestController
@@ -65,6 +65,12 @@ public class PaymentController {
     @PreAuthorize("hasAuthority('PAYMENT_VIEW')")
     public ResponseEntity<?> syncPaymentByPayosOrderCode(@PathVariable Long orderCode) {
         return ResponseEntity.ok(paymentService.syncMyPaymentByOrderCode(orderCode));
+    }
+
+    @PostMapping("/payments/orders/{orderCode}/cancel")
+    @PreAuthorize("hasAuthority('PAYMENT_VIEW')")
+    public ResponseEntity<?> cancelPaymentByPayosOrderCode(@PathVariable Long orderCode) {
+        return ResponseEntity.ok(paymentService.cancelMyPaymentByOrderCode(orderCode));
     }
 
     @GetMapping("/payments/payos/webhook")
