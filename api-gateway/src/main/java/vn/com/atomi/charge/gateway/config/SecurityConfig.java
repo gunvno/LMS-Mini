@@ -63,6 +63,9 @@ public class SecurityConfig {
             "/course/api/v1/courses/published",
             "/course/api/v1/courses/*/published",
             "/course/api/v1/courses/*/images/primary/view",
+            "/chat/ws",
+            "/chat/ws/**",
+            "/chat/api/v1/chat/**",
             "/billing/api/v1/payments/payos",
             "/billing/api/v1/payments/payos/webhook"
     };

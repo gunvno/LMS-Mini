@@ -27,6 +27,7 @@ config:
     notice: localhost:8086
     billing: localhost:8087
     invoice: localhost:8088
+    chat: localhost:8089
 
 spring:
   application:
@@ -127,6 +128,18 @@ spring:
                 - Path=/course/**
               filters:
                 - RewritePath=/course/(?<path>.*), /$\{path}
+            - id: lms-chat-websocket
+              uri: lb:ws://lms-chat-service
+              predicates:
+                - Path=/chat/ws,/chat/ws/**
+              filters:
+                - RewritePath=/chat/(?<path>.*), /$\{path}
+            - id: lms-chat-service
+              uri: lb://lms-chat-service
+              predicates:
+                - Path=/chat/**
+              filters:
+                - RewritePath=/chat/(?<path>.*), /$\{path}
             - id: lms-learning-service
               uri: lb://lms-learning-service
               predicates:
@@ -188,3 +201,5 @@ springdoc:
         url: /billing/v3/api-docs
       - name: lms-invoice-service
         url: /invoice/v3/api-docs
+      - name: lms-chat-service
+        url: /chat/v3/api-docs

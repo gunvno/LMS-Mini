@@ -19,6 +19,7 @@ import vn.com.atomi.charge.course.model.dto.CourseDto;
 import vn.com.atomi.charge.course.model.entity.CourseEntity;
 import vn.com.atomi.charge.course.model.enums.CourseStatus;
 import vn.com.atomi.charge.course.model.request.RejectCourseRequest;
+import vn.com.atomi.charge.course.model.response.CourseCatalogResponse;
 import vn.com.atomi.charge.course.repository.CourseRepository;
 import vn.com.atomi.charge.course.service.interfaces.CourseService;
 
@@ -306,6 +307,25 @@ public class CourseServiceImpl
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("course.not_found"));
         }
         return BaseResponse.success(HttpStatus.OK, mapper.toDto(course.get()));
+    }
+
+    @Override
+    public BaseResponse<List<CourseCatalogResponse>> getPublishedCatalog(int limit) {
+        int safeLimit = Math.max(1, Math.min(limit, 500));
+        List<CourseCatalogResponse> courses = repository
+                .findByStatusAndDeletedAtIsNullOrderByPublishedAtDesc(
+                        CourseStatus.PUBLISHED,
+                        PageRequest.of(0, safeLimit))
+                .stream()
+                .map(course -> new CourseCatalogResponse(
+                        course.getId(),
+                        course.getName(),
+                        course.getDescription(),
+                        course.getLevel(),
+                        course.getDurationMinutes(),
+                        course.getPrice()))
+                .toList();
+        return BaseResponse.success(HttpStatus.OK, courses);
     }
 
 }

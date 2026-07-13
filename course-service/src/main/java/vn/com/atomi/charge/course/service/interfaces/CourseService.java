@@ -8,6 +8,7 @@ import vn.com.atomi.charge.course.mapper.CourseMapper;
 import vn.com.atomi.charge.course.model.dto.CourseDto;
 import vn.com.atomi.charge.course.model.entity.CourseEntity;
 import vn.com.atomi.charge.course.model.request.RejectCourseRequest;
+import vn.com.atomi.charge.course.model.response.CourseCatalogResponse;
 import vn.com.atomi.charge.course.repository.CourseRepository;
 
 import java.util.List;
@@ -25,4 +26,5 @@ public interface CourseService
     List<String> getInstructorCourseIds(String userId);
     BaseResponse<Page<CourseDto>> getPublishedCourses(Pageable pageable);
     BaseResponse<CourseDto> getPublishedCourseDetails(String id);
+    BaseResponse<List<CourseCatalogResponse>> getPublishedCatalog(int limit);
 }

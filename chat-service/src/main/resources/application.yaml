@@ -1,0 +1,70 @@
+server:
+  port: 8089
+  shutdown: graceful
+  http2:
+    enabled: true
+
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+spring:
+  application:
+    name: lms-chat-service
+  config:
+    import: optional:classpath:application-base.yaml
+  datasource:
+    driverClassName: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/lms_chat_service?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
+    username: root
+    password: root
+    hikari:
+      schema: lms_chat_service
+  cloud:
+    consul:
+      host: localhost
+      port: 8500
+      config:
+        enabled: false
+      discovery:
+        enabled: true
+        instance-id: ${spring.application.name}-${server.port}
+        service-name: ${spring.application.name}
+        health-check-path: /actuator/health
+        prefer-ip-address: true
+        health-check-interval: 15s
+        register: true
+        deregister: true
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    open-in-view: false
+
+config:
+  service-name: lms-chat-service
+  api:
+    whiteList:
+      - /api/v1/chat/**
+      - /ws
+      - /ws/**
+  websocket:
+    allowed-origins: ${CHAT_ALLOWED_ORIGINS:http://localhost:3001}
+  gemini:
+    api-key: ${GEMINI_API_KEY:}
+    base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+    model: ${GEMINI_MODEL:gemini-3.1-flash-lite}
+    max-catalog-size: ${GEMINI_MAX_CATALOG_SIZE:200}
+    max-output-tokens: ${GEMINI_MAX_OUTPUT_TOKENS:800}
+  chatbot:
+    rate-limit-per-minute: ${CHATBOT_RATE_LIMIT_PER_MINUTE:20}
+  minio:
+    url: ${CONFIG_MINIO_URL:http://localhost:9000}
+    access-key: ${CONFIG_MINIO_ACCESS_KEY:minioadmin}
+    secret-key: ${CONFIG_MINIO_SECRET_KEY:minioadmin}
+    bucket: ${CONFIG_MINIO_BUCKET:lms-mini}
