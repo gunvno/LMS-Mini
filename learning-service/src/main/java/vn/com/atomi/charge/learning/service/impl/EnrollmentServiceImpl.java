@@ -287,46 +287,67 @@ public class EnrollmentServiceImpl extends BaseService<EnrollmentRepository,
         return responsePage;
     }
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public BaseResponse<EnrollmentDto> finishCourse(String courseId){
         response = new BaseResponse<>();
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userId = authentication.getName();
-        BaseResponse<AuthnUserDto> userDto = authnClient.getUserById(userId);
-        AuthnUserDto user = userDto.getData();
-        Optional<EnrollmentEntity> optionalEnrollment = repository.findByUserIdAndCourseIdAndDeletedAtIsNull(userId, courseId);
+        Optional<EnrollmentEntity> optionalEnrollment =
+                repository.findForUpdateByUserIdAndCourseId(userId, courseId);
         if(optionalEnrollment.isEmpty()){
             String localizedMsg = i18n.getMessage("learning.not_found");
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, localizedMsg);
         }
-        if(optionalEnrollment.get().getProgressPercent() < 100.0 && optionalEnrollment.get().getStatus() != EnrollmentStatus.COMPLETED){
+
+        EnrollmentEntity enrollment = optionalEnrollment.get();
+        double progressPercent = enrollment.getProgressPercent() == null
+                ? 0.0
+                : enrollment.getProgressPercent();
+        if (enrollment.getStatus() != EnrollmentStatus.COMPLETED && progressPercent < 100.0) {
             String localizedMsg = i18n.getMessage("course.not_finish");
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, localizedMsg);
         }
-        boolean quizCompleted = quizClient.completeQuizRequiredInCourse(courseId);
 
-        if (!quizCompleted) {
-            return BaseResponse.fail(HttpStatus.BAD_REQUEST, "quiz.required_not_passed");
+        if (enrollment.getStatus() != EnrollmentStatus.COMPLETED) {
+            boolean quizCompleted = quizClient.completeQuizRequiredInCourse(courseId);
+            if (!quizCompleted) {
+                return BaseResponse.fail(HttpStatus.BAD_REQUEST, "quiz.required_not_passed");
+            }
+
+            BaseResponse<AuthnUserDto> userResponse = authnClient.getUserById(userId);
+            AuthnUserDto user = userResponse == null ? null : userResponse.getData();
+            String modifiedBy = user == null || user.getUsername() == null
+                    ? userId
+                    : user.getUsername();
+
+            enrollment.setCompletedAt(LocalDateTime.now());
+            enrollment.setLastModifiedBy(modifiedBy);
+            enrollment.setStatus(EnrollmentStatus.COMPLETED);
+            enrollment.setLastModifiedDate(LocalDateTime.now());
+            enrollment = repository.save(enrollment);
         }
-        EnrollmentEntity enrollment = optionalEnrollment.get();
-        enrollment.setCompletedAt(LocalDateTime.now());
-        enrollment.setLastModifiedBy(user.getUsername());
-        enrollment.setStatus(EnrollmentStatus.COMPLETED);
-        enrollment.setLastModifiedDate(LocalDateTime.now());
-        EnrollmentEntity save = repository.save(enrollment);
 
-        CertificateEntity certificate = new CertificateEntity();
-        certificate.setCourseId(courseId);
-        certificate.setStatus(CertificateStatus.ISSUED);
-        certificate.setEnrollmentId(optionalEnrollment.get().getId());
-        certificate.setUserId(userId);
-        certificate.setIssuedAt(LocalDateTime.now());
-        certificate.setCertificateCode(generateCertificateCode());
-
-        certificateRepository.save(certificate);
-        response.setData(mapper.toDto(save));
+        issueCertificateIfMissing(enrollment);
+        response.setData(mapper.toDto(enrollment));
         response.setStatus(HttpStatus.OK);
 
         return response;
+    }
+
+    private void issueCertificateIfMissing(EnrollmentEntity enrollment) {
+        if (certificateRepository.findByUserIdAndCourseIdAndDeletedAtIsNull(
+                enrollment.getUserId(), enrollment.getCourseId()).isPresent()) {
+            return;
+        }
+
+        CertificateEntity certificate = new CertificateEntity();
+        certificate.setCourseId(enrollment.getCourseId());
+        certificate.setStatus(CertificateStatus.ISSUED);
+        certificate.setEnrollmentId(enrollment.getId());
+        certificate.setUserId(enrollment.getUserId());
+        certificate.setIssuedAt(LocalDateTime.now());
+        certificate.setCertificateCode(generateCertificateCode());
+        certificateRepository.save(certificate);
     }
 
     private String generateCertificateCode() {

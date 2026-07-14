@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import vn.com.atomi.charge.base.model.request.BaseRequest;
 import vn.com.atomi.charge.base.model.response.BaseResponse;
 import vn.com.atomi.charge.base.service.BaseService;
@@ -71,6 +72,7 @@ implements LearningProgressService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public BaseResponse<LearningProgressDto> finishLesson(String lessonId){
         response = new BaseResponse<>();
         if(!courseClient.existsLessonById(lessonId)){
@@ -96,6 +98,7 @@ implements LearningProgressService {
         }
         LearningProgressEntity entity = optionalProgress.get();
         if (entity.getStatus() == LearningProgressStatus.COMPLETED) {
+            tryCompleteCourse(courseId);
             response.setStatus(HttpStatus.OK);
             response.setData(mapper.toDto(entity));
             return response;
@@ -111,17 +114,27 @@ implements LearningProgressService {
         entity.setCompletedAt(LocalDateTime.now());
         LearningProgressEntity saved = repository.save(entity);
         EnrollmentEntity enrollment = optionalEnrollment.get();
-        double progressPercentAfter = enrollment.getProgressPercent() == null
-                ? 0.0
-                : enrollment.getProgressPercent();
-        double progressPercentBefore = Math.min(100.0, progressPercentAfter + 100.0 / countLesson);
-        enrollment.setProgressPercent(progressPercentBefore);
+        long completedLessonCount = repository.findByEnrollmentIdAndDeletedAtIsNull(enrollment.getId()).stream()
+                .filter(progress -> progress.getStatus() == LearningProgressStatus.COMPLETED)
+                .count();
+        double updatedProgressPercent = Math.min(100.0, completedLessonCount * 100.0 / countLesson);
+        enrollment.setProgressPercent(updatedProgressPercent);
         enrollmentRepository.save(enrollment);
 
+        tryCompleteCourse(courseId);
 
         response.setStatus(HttpStatus.OK);
         response.setData(mapper.toDto(saved));
         return response;
+    }
+
+    private void tryCompleteCourse(String courseId) {
+        try {
+            enrollmentService.finishCourse(courseId);
+        } catch (Exception ignored) {
+            // Hoàn thành bài học vẫn thành công khi khóa học chưa đủ điều kiện
+            // hoặc một dịch vụ kiểm tra điều kiện tạm thời không khả dụng.
+        }
     }
 
     private boolean hasContentAccess(EnrollmentEntity enrollment) {

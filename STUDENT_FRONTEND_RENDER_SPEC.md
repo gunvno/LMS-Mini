@@ -186,7 +186,7 @@ Gateway prefix: `/learning`
 | GET | `/learning/api/v1/my-courses` | learning-service | Yes | Lấy danh sách khóa học đã đăng ký của user hiện tại |
 | POST | `/learning/api/v1/lessons/{lessonId}/start` | learning-service | Yes | Bắt đầu bài học, tạo/cập nhật learning progress thành `IN_PROGRESS` |
 | POST | `/learning/api/v1/lessons/{lessonId}/complete` | learning-service | Yes | Hoàn thành bài học, cập nhật progress |
-| POST | `/learning/api/v1/enrollments/{id}/complete` | learning-service | Yes | Hoàn thành khóa học, kiểm tra lesson/quiz và sinh chứng chỉ |
+| POST | `/learning/api/v1/courses/{courseId}/complete` | learning-service | Yes | Hoàn thành khóa học, kiểm tra lesson/quiz và sinh chứng chỉ |
 | GET | `/learning/api/v1/my-certificates` | learning-service | Yes | Lấy chứng chỉ của user hiện tại |
 | GET | `/learning/api/v1/certificates/{code}` | learning-service | Optional/Yes | Xác minh chứng chỉ theo certificate code |
 
@@ -194,7 +194,7 @@ Luồng hoàn thành khóa học:
 
 1. User học hết lesson.
 2. User hoàn thành quiz bắt buộc nếu có.
-3. Frontend gọi `/learning/api/v1/enrollments/{id}/complete`.
+3. Frontend gọi `/learning/api/v1/courses/{courseId}/complete`.
 4. Backend kiểm tra điều kiện lesson progress + required quiz.
 5. Nếu đạt, backend sinh certificate.
 
@@ -694,7 +694,7 @@ export const learningService = {
   getMyCourses: (params) => apiClient(`/learning/api/v1/my-courses?${toQuery(params)}`),
   startLesson: (lessonId) => apiClient(`/learning/api/v1/lessons/${lessonId}/start`, { method: "POST" }),
   completeLesson: (lessonId) => apiClient(`/learning/api/v1/lessons/${lessonId}/complete`, { method: "POST" }),
-  completeEnrollment: (id) => apiClient(`/learning/api/v1/enrollments/${id}/complete`, { method: "POST" }),
+  completeCourse: (courseId) => apiClient(`/learning/api/v1/courses/${courseId}/complete`, { method: "POST" }),
   getMyCertificates: (params) => apiClient(`/learning/api/v1/my-certificates?${toQuery(params)}`),
   verifyCertificate: (code) => apiClient(`/learning/api/v1/certificates/${code}`),
 };

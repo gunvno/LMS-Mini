@@ -41,4 +41,9 @@ public class InternalEnrollmentController {
     public List<String> getAccessibleLessonIds(@PathVariable String courseId) {
         return enrollmentService.getCurrentUserAccessibleLessonIds(courseId);
     }
+
+    @PostMapping("/courses/{courseId}/complete")
+    public ResponseEntity<?> finishCourse(@PathVariable String courseId) {
+        return ResponseEntity.ok(enrollmentService.finishCourse(courseId));
+    }
 }

@@ -28,6 +28,13 @@ public class CertificateController {
     public ResponseEntity<?> getMyCertificate(Pageable pageable){
         return ResponseEntity.ok(service.getMyCertificate(pageable));
     }
+
+    @GetMapping("/certificates")
+    @PreAuthorize("hasAuthority('CERTIFICATE_MANAGE')")
+    public ResponseEntity<?> getCertificates(Pageable pageable) {
+        return ResponseEntity.ok(service.getCertificates(pageable));
+    }
+
     @GetMapping("/certificates/{code}")
     @PreAuthorize("hasAuthority('CERTIFICATE_VERIFY')")
     public ResponseEntity<?> verifyCertificate(@PathVariable String code){

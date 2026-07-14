@@ -554,7 +554,7 @@ Fields:
 |---|---:|---|---|
 | Enroll course | POST | `/learning/api/v1/courses/{courseId}/enroll` | `ENROLLMENT_ENROLL` |
 | My courses | GET | `/learning/api/v1/my-courses` | `ENROLLMENT_VIEW` |
-| Complete enrollment/course | POST | `/learning/api/v1/enrollments/{id}/complete` | `LEARNING_PROGRESS_UPDATE` |
+| Complete course | POST | `/learning/api/v1/courses/{courseId}/complete` | `LEARNING_PROGRESS_UPDATE` |
 
 Internal:
 
@@ -1180,7 +1180,7 @@ Mọi list page nên có:
 | yes | `GET /learning/api/v1/my-courses` | my courses |
 | yes | `POST /learning/api/v1/lessons/{lessonId}/start` | start lesson |
 | yes | `POST /learning/api/v1/lessons/{lessonId}/complete` | complete lesson |
-| yes | `POST /learning/api/v1/enrollments/{id}/complete` | complete course |
+| yes | `POST /learning/api/v1/courses/{courseId}/complete` | complete course |
 | yes | `GET /learning/api/v1/my-certificates` | my certificates |
 | yes | `GET /learning/api/v1/certificates/{code}` | verify certificate |
 | yes | `/quiz/api/v1/quiz` CRUD | quiz management |

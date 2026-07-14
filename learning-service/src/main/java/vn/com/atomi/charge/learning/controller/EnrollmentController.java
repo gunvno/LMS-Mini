@@ -32,9 +32,9 @@ public class EnrollmentController {
     public ResponseEntity<?> getMyCourse(Pageable pageable) {
         return ResponseEntity.ok(service.getMyEnroll(pageable));
     }
-    @PostMapping("/enrollments/{id}/complete")
+    @PostMapping("/courses/{courseId}/complete")
     @PreAuthorize("hasAuthority('LEARNING_PROGRESS_UPDATE')")
-    public ResponseEntity<?> finishCourse(@PathVariable String id){
-        return ResponseEntity.ok(service.finishCourse(id));
+    public ResponseEntity<?> finishCourse(@PathVariable String courseId){
+        return ResponseEntity.ok(service.finishCourse(courseId));
     }
 }

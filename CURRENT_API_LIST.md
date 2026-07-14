@@ -173,7 +173,7 @@ Gateway prefix: `/learning`.
 |---|---|---|---|
 | POST | `/learning/api/v1/courses/{courseId}/enroll` | `/api/v1/courses/{courseId}/enroll` | User hiện tại đăng ký khóa học |
 | GET | `/learning/api/v1/my-courses` | `/api/v1/my-courses` | Lấy danh sách khóa học đã đăng ký của user hiện tại |
-| POST | `/learning/api/v1/enrollments/{id}/complete` | `/api/v1/enrollments/{id}/complete` | Hoàn thành enrollment/khóa học, kiểm tra điều kiện và sinh chứng chỉ |
+| POST | `/learning/api/v1/courses/{courseId}/complete` | `/api/v1/courses/{courseId}/complete` | Hoàn thành khóa học, kiểm tra điều kiện và sinh chứng chỉ |
 
 ## Learning Service - Learning Progress
 
@@ -187,6 +187,7 @@ Gateway prefix: `/learning`.
 | Method | Gateway API | Raw service API | Chức năng |
 |---|---|---|---|
 | GET | `/learning/api/v1/my-certificates` | `/api/v1/my-certificates` | Lấy chứng chỉ của user hiện tại |
+| GET | `/learning/api/v1/certificates` | `/api/v1/certificates` | Admin lấy toàn bộ chứng chỉ trong hệ thống |
 | GET | `/learning/api/v1/certificates/{code}` | `/api/v1/certificates/{code}` | Tra cứu/xác minh chứng chỉ theo certificate code |
 
 ### Learning Internal API

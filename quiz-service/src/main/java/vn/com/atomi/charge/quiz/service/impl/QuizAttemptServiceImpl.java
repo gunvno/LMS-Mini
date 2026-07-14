@@ -1,6 +1,7 @@
 package vn.com.atomi.charge.quiz.service.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -20,6 +21,7 @@ import vn.com.atomi.charge.quiz.model.entity.QuizAttemptAnswerEntity;
 import vn.com.atomi.charge.quiz.model.entity.QuizEntity;
 import vn.com.atomi.charge.quiz.model.enums.QuizAttemptStatus;
 import vn.com.atomi.charge.quiz.model.enums.QuizStatus;
+import vn.com.atomi.charge.quiz.model.event.CourseCompletionEvaluationEvent;
 import vn.com.atomi.charge.quiz.repository.AnswerRepository;
 import vn.com.atomi.charge.quiz.repository.QuestionRepository;
 import vn.com.atomi.charge.quiz.repository.QuizAttemptRepository;
@@ -50,6 +52,8 @@ public class QuizAttemptServiceImpl extends BaseService<QuizAttemptRepository, Q
 
     @Autowired
     private LearningClient learningClient;
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
     @Autowired
     private QuizOwnershipService ownershipService;
     @Override
@@ -180,6 +184,9 @@ public class QuizAttemptServiceImpl extends BaseService<QuizAttemptRepository, Q
         attempt.setLastModifiedDate(LocalDateTime.now());
 
         QuizAttemptEntity saved = repository.save(attempt);
+        if (Boolean.TRUE.equals(saved.getPassed())) {
+            eventPublisher.publishEvent(new CourseCompletionEvaluationEvent(quiz.getCourseId()));
+        }
         response.setData(mapper.toDto(saved));
         response.setStatus(HttpStatus.OK);
         return response;

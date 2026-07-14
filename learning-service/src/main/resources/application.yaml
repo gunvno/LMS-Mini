@@ -59,12 +59,13 @@ config:
         enroll-course: ${config.api.prefix.public}/${config.api.version}/courses/{courseId}/enroll
         my-courses: ${config.api.prefix.public}/${config.api.version}/my-courses
         get-detail: ${config.api.prefix.public}/${config.api.version}/enrollments/{id}
-        complete-course: ${config.api.prefix.public}/${config.api.version}/enrollments/{id}/complete
+        complete-course: ${config.api.prefix.public}/${config.api.version}/courses/{courseId}/complete
       learning-progress:
         start-lesson: ${config.api.prefix.public}/${config.api.version}/lessons/{lessonId}/start
         complete-lesson: ${config.api.prefix.public}/${config.api.version}/lessons/{lessonId}/complete
       certificate:
         my-certificates: ${config.api.prefix.public}/${config.api.version}/my-certificates
+        certificates: ${config.api.prefix.public}/${config.api.version}/certificates
         verify-by-code: ${config.api.prefix.public}/${config.api.version}/certificates/{code}
     internal:
       enrollment:

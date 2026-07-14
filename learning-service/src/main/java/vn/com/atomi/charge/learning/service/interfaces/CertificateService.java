@@ -11,5 +11,6 @@ import vn.com.atomi.charge.learning.repository.CertificateRepository;
 
 public interface CertificateService extends IBaseService<CertificateRepository, CertificateDto, CertificateEntity, CertificateMapper> {
     BaseResponse<Page<CertificateDto>> getMyCertificate(Pageable pageable);
+    BaseResponse<Page<CertificateDto>> getCertificates(Pageable pageable);
     BaseResponse<CertificateDto> verifyCertificate(String certificateCode);
 }
