@@ -26,7 +26,6 @@ config:
     quiz: localhost:8085
     notice: localhost:8086
     billing: localhost:8087
-    invoice: localhost:8088
     chat: localhost:8089
 
 spring:
@@ -164,8 +163,8 @@ spring:
                 - Path=/billing/**
               filters:
                 - RewritePath=/billing/(?<path>.*), /$\{path}
-            - id: lms-invoice-service
-              uri: lb://lms-invoice-service
+            - id: lms-billing-invoice-legacy-route
+              uri: lb://lms-billing-service
               predicates:
                 - Path=/invoice/**
               filters:
@@ -199,7 +198,5 @@ springdoc:
         url: /notice/v3/api-docs
       - name: lms-billing-service
         url: /billing/v3/api-docs
-      - name: lms-invoice-service
-        url: /invoice/v3/api-docs
       - name: lms-chat-service
         url: /chat/v3/api-docs

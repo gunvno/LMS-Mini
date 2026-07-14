@@ -1,5 +1,7 @@
-CREATE DATABASE IF NOT EXISTS lms_invoice_service CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE lms_invoice_service;
+-- Migration gộp invoice-service vào billing-service.
+-- Script giữ nguyên database lms_invoice_service để có thể đối soát/rollback sau khi chuyển dữ liệu.
+CREATE DATABASE IF NOT EXISTS lms_billing_service CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE lms_billing_service;
 
 CREATE TABLE IF NOT EXISTS tbl_invoices (
     id VARCHAR(36) PRIMARY KEY,
@@ -26,7 +28,34 @@ CREATE TABLE IF NOT EXISTS tbl_invoices (
     KEY idx_invoices_deleted_at (deleted_at)
 );
 
-INSERT IGNORE INTO tbl_invoices (
+-- Chuyển hóa đơn từ database invoice cũ nếu bảng cũ tồn tại.
+SET @legacy_invoice_table_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.tables
+    WHERE table_schema = 'lms_invoice_service'
+      AND table_name = 'tbl_invoices'
+);
+
+SET @copy_legacy_invoices_sql = IF(
+    @legacy_invoice_table_exists > 0,
+    'INSERT IGNORE INTO lms_billing_service.tbl_invoices (
+        id, version, created_by, created_date, last_modified_by, last_modified_date,
+        deleted_at, payment_id, invoice_code, user_id, course_id, amount, provider,
+        provider_transaction_id, status, issued_at, paid_at
+     )
+     SELECT id, version, created_by, created_date, last_modified_by, last_modified_date,
+        deleted_at, payment_id, invoice_code, user_id, course_id, amount, provider,
+        provider_transaction_id, status, issued_at, paid_at
+     FROM lms_invoice_service.tbl_invoices',
+    'SELECT ''Không có bảng invoice cũ, bỏ qua bước sao chép'' AS migration_message'
+);
+
+PREPARE copy_legacy_invoices_stmt FROM @copy_legacy_invoices_sql;
+EXECUTE copy_legacy_invoices_stmt;
+DEALLOCATE PREPARE copy_legacy_invoices_stmt;
+
+-- Bổ sung các payment PAID chưa từng sinh hóa đơn.
+INSERT IGNORE INTO lms_billing_service.tbl_invoices (
     id, version, created_by, created_date, last_modified_by, last_modified_date,
     deleted_at, payment_id, invoice_code, user_id, course_id, amount, provider,
     provider_transaction_id, status, issued_at, paid_at
@@ -38,6 +67,12 @@ SELECT UUID(), 0, p.created_by, COALESCE(p.created_date, CURRENT_TIMESTAMP),
 FROM lms_billing_service.tbl_payments p
 WHERE p.status = 'PAID'
   AND p.invoice_code IS NOT NULL
-  AND NOT EXISTS (SELECT 1 FROM tbl_invoices i WHERE i.payment_id = p.id);
+  AND NOT EXISTS (
+      SELECT 1
+      FROM lms_billing_service.tbl_invoices i
+      WHERE i.payment_id = p.id
+  );
 
-SELECT COUNT(*) AS invoice_count FROM tbl_invoices WHERE deleted_at IS NULL;
+SELECT COUNT(*) AS invoice_count
+FROM lms_billing_service.tbl_invoices
+WHERE deleted_at IS NULL;

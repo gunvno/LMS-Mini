@@ -1,4 +1,4 @@
-package vn.com.atomi.charge.invoice.model.dto;
+package vn.com.atomi.charge.payment.model.response;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -8,7 +8,8 @@ import java.time.LocalDateTime;
 
 @Getter
 @Setter
-public class InvoiceDto {
+public class InvoiceResponse {
+
     private String id;
     private String paymentId;
     private String invoiceCode;

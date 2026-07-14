@@ -3,7 +3,6 @@ package vn.com.atomi.charge.payment.service.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -15,7 +14,6 @@ import org.springframework.util.StringUtils;
 import vn.com.atomi.charge.base.model.request.BaseRequest;
 import vn.com.atomi.charge.base.model.response.BaseResponse;
 import vn.com.atomi.charge.payment.client.CourseClient;
-import vn.com.atomi.charge.payment.client.InvoiceClient;
 import vn.com.atomi.charge.payment.client.LearningClient;
 import vn.com.atomi.charge.payment.client.PayosClient;
 import vn.com.atomi.charge.payment.mapper.PaymentMapper;
@@ -27,6 +25,7 @@ import vn.com.atomi.charge.payment.model.request.PayosWebhookRequest;
 import vn.com.atomi.charge.payment.model.response.PaymentResponse;
 import vn.com.atomi.charge.payment.model.response.PayosPaymentLinkResponse;
 import vn.com.atomi.charge.payment.repository.PaymentRepository;
+import vn.com.atomi.charge.payment.service.interfaces.InvoiceService;
 import vn.com.atomi.charge.payment.service.interfaces.PaymentService;
 
 import java.math.BigDecimal;
@@ -47,14 +46,11 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final CourseClient courseClient;
-    private final InvoiceClient invoiceClient;
+    private final InvoiceService invoiceService;
     private final LearningClient learningClient;
     private final PayosClient payosClient;
     private final ObjectMapper objectMapper;
     private final PaymentMapper paymentMapper;
-
-    @Value("${internal.service-key}")
-    private String internalServiceKey;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -377,7 +373,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     private void createInvoice(PaymentEntity payment) {
-        invoiceClient.createOrGet(paymentMapper.toInvoiceCreateRequest(payment), internalServiceKey);
+        invoiceService.createOrGet(payment);
     }
 
     private String invoiceCode(Long orderCode) {

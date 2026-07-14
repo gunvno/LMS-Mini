@@ -15,8 +15,7 @@ Hệ thống hiện có các service chính:
 | learning-service | `/learning` | Enrollment, tiến độ học, chứng chỉ |
 | quiz-service | `/quiz` | Quiz, câu hỏi, đáp án, attempt |
 | notice-service | `/notice` | Entity thông báo đã có, controller public chưa hoàn thiện |
-| billing-service | `/billing` | Thanh toán khóa học qua PayOS, lưu giao dịch, webhook paid và auto enroll |
-| invoice-service | `/invoice` | Hóa đơn và lịch sử hóa đơn |
+| billing-service | `/billing` | Thanh toán qua PayOS, hóa đơn, lịch sử giao dịch, webhook paid và auto enroll |
 
 Frontend nên chỉ gọi qua API Gateway, không gọi trực tiếp port service.
 
@@ -664,10 +663,9 @@ UI khi lỗi:
 
 | Chức năng | Method | Gateway API | Permission |
 |---|---:|---|---|
-| Hóa đơn của tôi | GET | `/invoice/api/v1/invoices/me` | `PAYMENT_VIEW` |
-| Chi tiết hóa đơn | GET | `/invoice/api/v1/invoices/{invoiceCode}` | `PAYMENT_VIEW` |
-| Admin xem hóa đơn | GET | `/invoice/api/v1/admin/invoices` | `PAYMENT_VIEW` |
-| Billing tạo hóa đơn nội bộ | POST | `/api/v1/internal/invoices` | internal service key |
+| Hóa đơn của tôi | GET | `/billing/api/v1/invoices/me` | `PAYMENT_VIEW` |
+| Chi tiết hóa đơn | GET | `/billing/api/v1/invoices/{invoiceCode}` | `PAYMENT_VIEW` |
+| Admin xem hóa đơn | GET | `/billing/api/v1/admin/invoices` | `PAYMENT_MANAGE` |
 
 Create payment body:
 
@@ -688,7 +686,7 @@ Flow:
 3. Backend tạo payment `PENDING`, gọi PayOS và trả `providerCheckoutUrl`.
 4. Frontend redirect sang `providerCheckoutUrl`.
 5. PayOS thanh toán xong gọi webhook `/billing/api/v1/payments/payos/webhook`.
-6. Billing-service verify checksum, đổi payment thành `PAID`, gọi invoice-service tạo hóa đơn, rồi gọi learning-service internal để auto enroll course.
+6. Billing-service verify checksum, đổi payment thành `PAID`, lưu hóa đơn trong cùng service, rồi gọi learning-service internal để auto enroll course.
 7. PayOS redirect về `/payment/success`, frontend gọi lại `/learning/api/v1/my-courses` để kiểm tra course đã vào danh sách học.
 
 ## 13. Quiz Module
@@ -1196,9 +1194,9 @@ Mọi list page nên có:
 | yes | `POST /billing/api/v1/course-payments` | tạo link PayOS để mua khóa học |
 | yes | `GET /billing/api/v1/payments/me` | danh sách giao dịch của tôi |
 | yes | `GET /billing/api/v1/payments/history/me` | lịch sử giao dịch của tôi |
-| yes | `GET /invoice/api/v1/invoices/me` | hóa đơn của tôi |
-| yes | `GET /invoice/api/v1/admin/invoices` | admin xem toàn bộ hóa đơn |
-| yes | `POST /billing/api/v1/payments/payos/webhook` | PayOS callback, gọi invoice-service và auto enroll |
+| yes | `GET /billing/api/v1/invoices/me` | hóa đơn của tôi |
+| yes | `GET /billing/api/v1/admin/invoices` | admin xem toàn bộ hóa đơn |
+| yes | `POST /billing/api/v1/payments/payos/webhook` | PayOS callback, lưu hóa đơn và auto enroll |
 
 ### 20.6 Notice
 

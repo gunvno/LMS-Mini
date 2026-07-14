@@ -1,5 +1,0 @@
-.DS_Store
-logs
-*.log
-target/*
-!target/invoice-service-1.0.0.jar

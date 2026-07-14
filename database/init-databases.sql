@@ -9,7 +9,6 @@ CREATE DATABASE IF NOT EXISTS lms_learning_service CHARACTER SET utf8mb4 COLLATE
 CREATE DATABASE IF NOT EXISTS lms_quiz_service CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE DATABASE IF NOT EXISTS lms_notice_service CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE DATABASE IF NOT EXISTS lms_billing_service CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE IF NOT EXISTS lms_invoice_service CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE DATABASE IF NOT EXISTS lms_chat_service CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- =========================================================
@@ -93,10 +92,8 @@ CREATE TABLE IF NOT EXISTS tbl_payments (
 );
 
 -- =========================================================
--- invoice-service
+-- invoices (thuộc billing-service)
 -- =========================================================
-USE lms_invoice_service;
-
 CREATE TABLE IF NOT EXISTS tbl_invoices (
     id VARCHAR(36) PRIMARY KEY,
     version BIGINT NOT NULL DEFAULT 0,

@@ -2,7 +2,6 @@ package vn.com.atomi.charge.payment.mapper;
 
 import org.springframework.stereotype.Component;
 import vn.com.atomi.charge.payment.model.entity.PaymentEntity;
-import vn.com.atomi.charge.payment.model.request.InvoiceCreateRequest;
 import vn.com.atomi.charge.payment.model.response.PaymentResponse;
 
 @Component
@@ -31,20 +30,5 @@ public class PaymentMapper {
                 ? entity.getCreatedDate()
                 : entity.getPaidAt());
         return response;
-    }
-
-    public InvoiceCreateRequest toInvoiceCreateRequest(PaymentEntity entity) {
-        InvoiceCreateRequest request = new InvoiceCreateRequest();
-        request.setPaymentId(entity.getId());
-        request.setInvoiceCode(entity.getInvoiceCode());
-        request.setUserId(entity.getUserId());
-        request.setCourseId(entity.getCourseId());
-        request.setAmount(entity.getAmount());
-        request.setProvider(entity.getProvider());
-        request.setProviderTransactionId(entity.getProviderTransactionId());
-        request.setStatus(entity.getStatus().name());
-        request.setIssuedAt(entity.getInvoiceIssuedAt());
-        request.setPaidAt(entity.getPaidAt());
-        return request;
     }
 }

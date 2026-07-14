@@ -83,7 +83,6 @@ services:
       CONFIG_API_QUIZ: http://quiz-service:8085
       CONFIG_API_NOTICE: http://notice-service:8086
       CONFIG_API_BILLING: http://billing-service:8087
-      CONFIG_API_INVOICE: http://invoice-service:8088
       CONFIG_API_CHAT: http://chat-service:8089
     ports:
       - "8080:8080"
@@ -395,36 +394,6 @@ services:
       - "8087:8087"
     volumes:
       - ./billing-service/logs:/app/logs
-
-  invoice-service:
-    container_name: lms-invoice-service
-    build:
-      context: ./invoice-service
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    depends_on:
-      consul:
-        condition: service_healthy
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/lms_invoice_service?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
-      SPRING_DATASOURCE_HIKARI_SCHEMA: lms_invoice_service
-      SPRING_CLOUD_CONSUL_HOST: consul
-      SPRING_CLOUD_CONSUL_PORT: 8500
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
-      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-lms-mini-internal-change-me}
-      CONFIG_MINIO_URL: http://minio:9000
-      CONFIG_MINIO_ACCESS_KEY: ${CONFIG_MINIO_ACCESS_KEY:-minioadmin}
-      CONFIG_MINIO_SECRET_KEY: ${CONFIG_MINIO_SECRET_KEY:-minioadmin}
-      CONFIG_MINIO_BUCKET: lms-mini
-    ports:
-      - "8088:8088"
-    volumes:
-      - ./invoice-service/logs:/app/logs
 
 volumes:
   lms-mini-mysql-data:
