@@ -28,7 +28,7 @@ implements CertificateService {
 
     @Override
     public BaseResponse<Page<CertificateDto>> getMyCertificate(Pageable pageable){
-        responsePage = new BaseResponse<>();
+        BaseResponse<Page<CertificateDto>> responsePage = new BaseResponse<>();
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userId = authentication.getName();
         Page<CertificateEntity> certificateEntity =
@@ -40,7 +40,7 @@ implements CertificateService {
 
     @Override
     public BaseResponse<Page<CertificateDto>> getCertificates(Pageable pageable) {
-        responsePage = new BaseResponse<>();
+        BaseResponse<Page<CertificateDto>> responsePage = new BaseResponse<>();
         Page<CertificateEntity> certificateEntity = repository.findByDeletedAtIsNull(newestFirst(pageable));
         responsePage.setStatus(HttpStatus.OK);
         responsePage.setData(certificateEntity.map(mapper::toDto));
@@ -49,7 +49,7 @@ implements CertificateService {
 
     @Override
     public BaseResponse<CertificateDto> verifyCertificate(String certificateCode){
-        response = new BaseResponse<>();
+        BaseResponse<CertificateDto> response = new BaseResponse<>();
         if(certificateCode.isEmpty())
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("certificate.not_found"));
         Optional<CertificateEntity> optionalCertificate = repository.findByCertificateCodeAndDeletedAtIsNull(certificateCode);

@@ -16,4 +16,8 @@ public interface AnswerRepository extends BaseRepository<AnswerEntity, String> {
     );
 
     List<AnswerEntity> findByQuestionIdAndDeletedAtIsNullOrderByOrderIndexAsc(String questionId);
+
+    List<AnswerEntity> findByQuestionIdAndDeletedAtIsNullOrderByOrderIndexAscCreatedDateAsc(String questionId);
+
+    long countByQuestionIdAndDeletedAtIsNull(String questionId);
 }

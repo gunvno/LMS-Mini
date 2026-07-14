@@ -31,6 +31,10 @@ public class QuizAttemptDto extends BaseDto<String> {
 
     private QuizAttemptStatus status;
 
+    private Integer totalQuestions;
+
+    private Integer correctAnswers;
+
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @Valid
     private List<QuizAttemptAnswerInputDto> answers = new ArrayList<>();

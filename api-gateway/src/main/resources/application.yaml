@@ -2,7 +2,7 @@ server:
   port: 8080
 
 internal:
-  service-key: ${INTERNAL_SERVICE_KEY:lms-mini-internal-change-me}
+  service-key: ${INTERNAL_SERVICE_KEY:}
   shutdown: graceful
   http2:
     enabled: true
@@ -31,6 +31,8 @@ config:
 spring:
   application:
     name: ${config.service-name}
+  codec:
+    max-in-memory-size: 10MB
   lifecycle:
     timeout-per-shutdown-phase: 30s
   cloud:
@@ -53,13 +55,6 @@ spring:
         webflux:
           default-filters:
             - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin RETAIN_UNIQUE
-          globalcors:
-            cors-configurations:
-              '[/**]':
-                allowed-origins: "*"
-                allowed-methods: "*"
-                allowed-headers: "*"
-                allow-credentials: false
           discovery:
             locator:
               enabled: true

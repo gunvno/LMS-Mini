@@ -4,18 +4,18 @@ WORKDIR /workspace
 COPY base-service/pom.xml base-service/pom.xml
 COPY chat-service/pom.xml chat-service/pom.xml
 
-RUN --mount=type=cache,target=/root/.m2 \
+RUN --mount=type=cache,target=/root/.m2,sharing=locked \
     cd base-service && mvn -q -DskipTests dependency:go-offline
 
 COPY base-service/src base-service/src
-RUN --mount=type=cache,target=/root/.m2 \
+RUN --mount=type=cache,target=/root/.m2,sharing=locked \
     cd base-service && mvn -q -DskipTests install
 
-RUN --mount=type=cache,target=/root/.m2 \
+RUN --mount=type=cache,target=/root/.m2,sharing=locked \
     cd chat-service && mvn -q -DskipTests dependency:go-offline
 
 COPY chat-service/src chat-service/src
-RUN --mount=type=cache,target=/root/.m2 \
+RUN --mount=type=cache,target=/root/.m2,sharing=locked \
     cd chat-service && mvn -q -DskipTests package
 
 FROM eclipse-temurin:17.0.17_10-jre-ubi9-minimal

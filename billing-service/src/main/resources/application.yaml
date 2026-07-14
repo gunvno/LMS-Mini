@@ -54,7 +54,7 @@ config:
       - /api/v1/payments/payos/webhook
 
 internal:
-  service-key: ${INTERNAL_SERVICE_KEY:lms-mini-internal-change-me}
+  service-key: ${INTERNAL_SERVICE_KEY:}
 
 payos:
   enabled: ${PAYOS_ENABLED:false}

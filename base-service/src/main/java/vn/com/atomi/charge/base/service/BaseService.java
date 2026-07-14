@@ -1,6 +1,5 @@
 package vn.com.atomi.charge.base.service;
 
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -10,8 +9,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 import vn.com.atomi.charge.base.mapper.EntityMapper;
 import vn.com.atomi.charge.base.model.dto.BaseDto;
 import vn.com.atomi.charge.base.model.enums.BaseErrorCode;
@@ -40,26 +37,12 @@ public abstract class BaseService<
   @Autowired
   protected I18nService i18n;
 
-  protected BaseResponse<D> response;
-
-  protected BaseResponse<Page<D>> responsePage;
-
-  protected HttpServletRequest request;
-
-  protected void getRequest() {
-    request = ((ServletRequestAttributes) RequestContextHolder
-        .getRequestAttributes()).getRequest();
-  }
-
   @Override
   @Transactional(rollbackFor = Exception.class)
   public BaseResponse<D> create(BaseRequest<D> dto) {
-    response = new BaseResponse<>();
+    BaseResponse<D> response = new BaseResponse<>();
     try {
-      getRequest();
       if (isDuplicate(dto)) {
-//        String langHeader = request.getHeader("Accept-Language");
-//        Locale locale = request.getLocale();
         String localizedMsg = i18n.getMessage("common.already_exists");
         return BaseResponse.fail(HttpStatus.BAD_REQUEST, localizedMsg);
       }
@@ -77,9 +60,8 @@ public abstract class BaseService<
   @Override
   @Transactional(rollbackFor = Exception.class)
   public BaseResponse<D> update(BaseRequest<D> dto) {
-    response = new BaseResponse<>();
+    BaseResponse<D> response = new BaseResponse<>();
     try {
-      getRequest();
       if (!repository.existsById(dto.getData().getId())) {
         String localizedMsg = i18n.getMessage("common.not_found");
         return BaseResponse.fail(HttpStatus.BAD_REQUEST, localizedMsg);
@@ -106,7 +88,7 @@ public abstract class BaseService<
 
   @Override
   public BaseResponse<Page<D>> getAll(Map<String, String> params, Pageable pageable) {
-    responsePage = new BaseResponse<>();
+    BaseResponse<Page<D>> responsePage = new BaseResponse<>();
     try {
       BaseSpecification<E> filters = new BaseSpecification<>(params);
       Sort sort = Sort.by(Sort.Direction.DESC, "lastModifiedDate", "createdDate");
@@ -119,7 +101,7 @@ public abstract class BaseService<
       }
     } catch (Exception ex) {
       responsePage.setStatus(HttpStatus.BAD_REQUEST);
-      response.setErrorCode(BaseErrorCode.FAILURE.getErrorCode());
+      responsePage.setErrorCode(BaseErrorCode.FAILURE.getErrorCode());
       responsePage.setMessage(StringUtil.beautyError(ex));
     }
     return responsePage;
@@ -127,9 +109,8 @@ public abstract class BaseService<
 
   @Override
   public BaseResponse<D> getDetails(String id) {
-    response = new BaseResponse<>();
+    BaseResponse<D> response = new BaseResponse<>();
     try {
-      getRequest();
       if (!repository.existsById(id)) {
         String localizedMsg = i18n.getMessage("common.not_found");
         return BaseResponse.fail(HttpStatus.BAD_REQUEST, localizedMsg);
@@ -153,9 +134,8 @@ public abstract class BaseService<
   @Override
   @Transactional(rollbackFor = Exception.class)
   public BaseResponse<D> delete(String id) {
-    response = new BaseResponse<>();
+    BaseResponse<D> response = new BaseResponse<>();
     try {
-      getRequest();
       if (!repository.existsById(id)) {
         String localizedMsg = i18n.getMessage("common.not_found");
         return BaseResponse.fail(HttpStatus.BAD_REQUEST, localizedMsg);
@@ -174,7 +154,7 @@ public abstract class BaseService<
   @Override
   @Transactional(rollbackFor = Exception.class)
   public BaseResponse<D> delete(List<String> ids) {
-    response = new BaseResponse<>();
+    BaseResponse<D> response = new BaseResponse<>();
     try {
       String username = currentUsername();
       repository.softDelete(ids, LocalDateTime.now(), username, LocalDateTime.now());

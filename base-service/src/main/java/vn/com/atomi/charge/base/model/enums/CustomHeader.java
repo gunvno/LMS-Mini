@@ -11,6 +11,7 @@ public enum CustomHeader {
     ROLE_CODE("X-Role-Code"),
     PHONE_NUMBER("X-User"),
     PERMISSIONS("X-Permissions"),
+    INTERNAL_SERVICE_KEY("X-Internal-Service-Key"),
     ;
 
     private final String headerName;

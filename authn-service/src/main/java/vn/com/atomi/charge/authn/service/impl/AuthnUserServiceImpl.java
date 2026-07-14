@@ -44,7 +44,7 @@ public class AuthnUserServiceImpl extends BaseService<AuthnUserRepository, Authn
 
     @Override
     public BaseResponse<AuthnUserDto> getUserById(String userId) {
-        response = new BaseResponse<>();
+        BaseResponse<AuthnUserDto> response = new BaseResponse<>();
         Optional<AuthnUserEntity> optionalUser = repository.findEntityById(userId);
         if (optionalUser.isEmpty()) {
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("user.not_found"));

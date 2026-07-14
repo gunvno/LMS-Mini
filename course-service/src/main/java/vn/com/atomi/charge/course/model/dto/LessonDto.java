@@ -29,8 +29,7 @@ public class LessonDto extends BaseDto<String> {
     @Schema(example = "https://example.com/video.mp4")
     private String videoUrl;
 
-    @NotNull(groups = Create.class)
-    @Schema(example = "1")
+    @Schema(description = "Automatically assigned by the server", example = "1", accessMode = Schema.AccessMode.READ_ONLY)
     private Integer orderIndex;
 
     @Schema(example = "30")

@@ -24,7 +24,6 @@ public class AnswerDto extends BaseDto<String> {
     @Schema(description = "correct of answer", example = "true")
     private Boolean correct;
 
-    @NotNull(groups = Create.class)
-    @Schema(description = "where answer is putted in", example = "1")
+    @Schema(description = "Automatically assigned by the server", example = "1", accessMode = Schema.AccessMode.READ_ONLY)
     private Integer orderIndex;
 }

@@ -5,8 +5,8 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
-import vn.com.atomi.charge.quiz.repository.client.CourseClient;
-import vn.com.atomi.charge.quiz.repository.client.LearningClient;
+import vn.com.atomi.charge.quiz.client.CourseClient;
+import vn.com.atomi.charge.quiz.client.LearningClient;
 import vn.com.atomi.charge.quiz.model.entity.QuizEntity;
 import vn.com.atomi.charge.quiz.model.enums.QuizStatus;
 

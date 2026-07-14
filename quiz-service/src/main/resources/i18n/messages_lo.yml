@@ -102,6 +102,7 @@ import_excel:
 quiz:
   not_found: "ບໍ່ພົບ quiz"
   invalid_status: "ສະຖານະ quiz ບໍ່ຖືກຕ້ອງ"
+  invalid_configuration: "Quiz ຕ້ອງມີຄໍາຖາມທີ່ຖືກຕ້ອງ ແລະແຕ່ລະຄໍາຖາມຕ້ອງມີຢ່າງນ້ອຍສອງຄໍາຕອບ ແລະມີຄໍາຕອບຖືກພຽງໜຶ່ງຂໍ້"
   attempt_limit_reached: "ທ່ານໄດ້ເຖິງຈໍານວນຄັ້ງທີ່ເຮັດ quiz ສູງສຸດແລ້ວ"
 
 quiz_attempt:

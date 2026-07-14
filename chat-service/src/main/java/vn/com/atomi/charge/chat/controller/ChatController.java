@@ -17,7 +17,7 @@ import vn.com.atomi.charge.base.model.response.BaseResponse;
 import vn.com.atomi.charge.chat.model.request.SendChatMessageRequest;
 import vn.com.atomi.charge.chat.model.response.ChatConversationResponse;
 import vn.com.atomi.charge.chat.model.response.ChatMessageResponse;
-import vn.com.atomi.charge.chat.service.impl.ChatRateLimiter;
+import vn.com.atomi.charge.chat.service.internal.ChatRateLimiter;
 import vn.com.atomi.charge.chat.service.interfaces.ChatService;
 
 import java.util.List;

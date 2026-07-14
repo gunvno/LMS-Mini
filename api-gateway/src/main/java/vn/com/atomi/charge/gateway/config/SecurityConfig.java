@@ -1,9 +1,9 @@
 package vn.com.atomi.charge.gateway.config;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.codec.ServerCodecConfigurer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
@@ -12,6 +12,7 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -24,6 +25,9 @@ public class SecurityConfig {
 
     private final AuthenticationEntryPoint authEntryPoint;
 
+    @Value("${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}")
+    private String corsAllowedOrigins;
+
     private final String[] WHITELIST_API = {
             "/swagger-ui.html",
             "/v3/api-docs/**",
@@ -34,7 +38,6 @@ public class SecurityConfig {
             "/swagger-resources/**",
             "/webjars/**",
             "/public/**",
-            "/internal/**",
             "/api/v1/health-check",
             "/auth/register",
             "/auth/token",
@@ -88,7 +91,10 @@ public class SecurityConfig {
     @Bean
     public UrlBasedCorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("*")); // Allow specific origins
+        config.setAllowedOrigins(Arrays.stream(corsAllowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .toList());
         config.setAllowedMethods(List.of("*"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(false);
@@ -96,12 +102,5 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
-    }
-
-    @Bean
-    public ServerCodecConfigurer serverCodecConfigurer() {
-      ServerCodecConfigurer configurer = ServerCodecConfigurer.create();
-      configurer.defaultCodecs().maxInMemorySize(200 * 1024 * 1024);
-      return configurer;
     }
 }

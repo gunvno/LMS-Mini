@@ -26,6 +26,6 @@ services:
       SPRING_MAIL_USERNAME: ${SMTP_USERNAME:-longta2004.vtv3@gmail.com}
       SPRING_MAIL_PASSWORD: ${SMTP_APP_PASSWORD:?Set SMTP_APP_PASSWORD in .env}
     ports:
-      - 8086:8086
+      - 127.0.0.1:8086:8086
     volumes:
       - ./logs:/app/logs

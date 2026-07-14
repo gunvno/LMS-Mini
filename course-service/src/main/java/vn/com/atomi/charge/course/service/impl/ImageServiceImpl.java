@@ -2,6 +2,7 @@ package vn.com.atomi.charge.course.service.impl;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.data.domain.Page;
@@ -53,7 +54,7 @@ public class ImageServiceImpl
     @Transactional(rollbackFor = Exception.class)
     public BaseResponse<ImageDto> uploadCourseImage(String courseId, MultipartFile file) {
         assertCanManageCourse(courseId);
-        response = new BaseResponse<>();
+        BaseResponse<ImageDto> response = new BaseResponse<>();
         try {
             if (!StringUtils.hasText(courseId) || courseRepository.findEntityById(courseId).isEmpty()) {
                 return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("course.not_found"));
@@ -211,12 +212,15 @@ public class ImageServiceImpl
             contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
         }
 
-        String dispositionType = attachment ? "attachment" : "inline";
         String safeFileName = sanitizeFileName(image.getFileName());
+        ContentDisposition contentDisposition = ContentDisposition
+            .builder(attachment ? "attachment" : "inline")
+            .filename(safeFileName, StandardCharsets.UTF_8)
+            .build();
 
         return ResponseEntity.ok()
             .contentType(MediaType.parseMediaType(contentType))
-            .header(HttpHeaders.CONTENT_DISPOSITION, dispositionType + "; filename=\"" + safeFileName + "\"")
+            .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
             .body(file.content());
     }
 

@@ -1,8 +1,25 @@
-FROM eclipse-temurin:17.0.17_10-jre-ubi9-minimal
+FROM maven:3.9.9-eclipse-temurin-17 AS build
+WORKDIR /workspace
 
+COPY base-service/pom.xml base-service/pom.xml
+COPY billing-service/pom.xml billing-service/pom.xml
+
+RUN --mount=type=cache,target=/root/.m2,sharing=locked \
+    cd base-service && mvn -q -DskipTests dependency:go-offline
+
+COPY base-service/src base-service/src
+RUN --mount=type=cache,target=/root/.m2,sharing=locked \
+    cd base-service && mvn -q -DskipTests install
+
+RUN --mount=type=cache,target=/root/.m2,sharing=locked \
+    cd billing-service && mvn -q -DskipTests dependency:go-offline
+
+COPY billing-service/src billing-service/src
+RUN --mount=type=cache,target=/root/.m2,sharing=locked \
+    cd billing-service && mvn -q -DskipTests package
+
+FROM eclipse-temurin:17.0.17_10-jre-ubi9-minimal
 ENV TZ=Asia/Ho_Chi_Minh
 WORKDIR /app
-
-COPY target/billing-service-1.0.0.jar /app/service.jar
-
+COPY --from=build /workspace/billing-service/target/billing-service-1.0.0.jar /app/service.jar
 ENTRYPOINT ["java", "-jar", "/app/service.jar"]

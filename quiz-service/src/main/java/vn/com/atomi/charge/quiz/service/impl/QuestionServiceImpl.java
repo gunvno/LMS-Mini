@@ -58,9 +58,8 @@ implements QuestionService {
         QuizEntity quiz = quizRepository.findEntityById(QuizId)
                 .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied"));
         ownershipService.assertCanManageCourse(quiz.getCourseId());
-        response = new BaseResponse<>();
+        BaseResponse<QuestionDto> response = new BaseResponse<>();
         try {
-            getRequest();
 
             dto.getData().setQuizId(QuizId);
             dto.getData().setOrderIndex(nextOrderIndex(QuizId));

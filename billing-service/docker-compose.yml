@@ -26,6 +26,6 @@ services:
       PAYOS_RETURN_URL: ${PAYOS_RETURN_URL:-http://localhost:3001/payment/success}
       PAYOS_CANCEL_URL: ${PAYOS_CANCEL_URL:-http://localhost:3001/payment/cancel}
     ports:
-      - 8087:8087
+      - 127.0.0.1:8087:8087
     volumes:
       - ./logs:/app/logs

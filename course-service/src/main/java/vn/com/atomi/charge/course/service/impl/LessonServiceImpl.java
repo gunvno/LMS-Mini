@@ -97,6 +97,7 @@ public class LessonServiceImpl
     @Transactional(rollbackFor = Exception.class)
     public BaseResponse<LessonDto> create(BaseRequest<LessonDto> dto) {
         assertCanManageCourse(dto.getData().getCourseId());
+        dto.getData().setOrderIndex(nextOrderIndex(dto.getData().getCourseId()));
         BaseResponse<LessonDto> result = super.create(dto);
         if (result != null && result.getData() != null) {
             syncCourseDuration(result.getData().getCourseId());
@@ -108,16 +109,18 @@ public class LessonServiceImpl
     @Transactional(rollbackFor = Exception.class)
     public BaseResponse<LessonDto> update(BaseRequest<LessonDto> dto) {
         String oldCourseId = null;
+        Integer oldOrderIndex = null;
         if (dto != null && dto.getData() != null && StringUtils.hasText(dto.getData().getId())) {
-            oldCourseId = repository.findEntityById(dto.getData().getId())
-                .map(LessonEntity::getCourseId)
-                .orElse(null);
+            LessonEntity existing = repository.findEntityById(dto.getData().getId()).orElse(null);
+            oldCourseId = existing == null ? null : existing.getCourseId();
+            oldOrderIndex = existing == null ? null : existing.getOrderIndex();
         }
 
         if (StringUtils.hasText(oldCourseId)) {
             assertCanManageCourse(oldCourseId);
         }
         assertCanManageCourse(dto.getData().getCourseId());
+        dto.getData().setOrderIndex(oldOrderIndex);
         BaseResponse<LessonDto> result = super.update(dto);
         if (result != null && result.getData() != null) {
             syncCourseDuration(result.getData().getCourseId());
@@ -138,6 +141,7 @@ public class LessonServiceImpl
         assertCanManageCourse(courseId);
         BaseResponse<LessonDto> result = super.delete(id);
         if (result != null && result.getStatus() != null && result.getStatus().is2xxSuccessful()) {
+            normalizeLessonOrder(courseId);
             syncCourseDuration(courseId);
         }
         return result;
@@ -158,7 +162,10 @@ public class LessonServiceImpl
 
         BaseResponse<LessonDto> result = super.delete(ids);
         if (result != null && result.getStatus() != null && result.getStatus().is2xxSuccessful()) {
-            courseIds.forEach(this::syncCourseDuration);
+            courseIds.forEach(courseId -> {
+                normalizeLessonOrder(courseId);
+                syncCourseDuration(courseId);
+            });
         }
         return result;
     }
@@ -167,11 +174,11 @@ public class LessonServiceImpl
     @Transactional(rollbackFor = Exception.class)
     public BaseResponse<LessonDto> createLesson(BaseRequest<LessonDto> dto, String courseId) {
         assertCanManageCourse(courseId);
-        response = new BaseResponse<>();
+        BaseResponse<LessonDto> response = new BaseResponse<>();
         try {
-            getRequest();
 
             dto.getData().setCourseId(courseId);
+            dto.getData().setOrderIndex(nextOrderIndex(courseId));
 
             if (isDuplicate(dto)) {
                 String localizedMsg = i18n.getMessage("common.already_exists");
@@ -291,6 +298,28 @@ public class LessonServiceImpl
         CourseEntity course = optionalCourse.get();
         course.setDurationMinutes(repository.sumDurationMinutesByCourseId(courseId));
         courseRepository.save(course);
+    }
+
+    private int nextOrderIndex(String courseId) {
+        return normalizeLessonOrder(courseId) + 1;
+    }
+
+    private int normalizeLessonOrder(String courseId) {
+        List<LessonEntity> lessons = repository
+                .findByCourseIdAndDeletedAtIsNullOrderByOrderIndexAscCreatedDateAsc(courseId);
+        boolean changed = false;
+        for (int index = 0; index < lessons.size(); index++) {
+            int expectedOrder = index + 1;
+            LessonEntity lesson = lessons.get(index);
+            if (lesson.getOrderIndex() == null || lesson.getOrderIndex() != expectedOrder) {
+                lesson.setOrderIndex(expectedOrder);
+                changed = true;
+            }
+        }
+        if (changed) {
+            repository.saveAll(lessons);
+        }
+        return lessons.size();
     }
 
     private void assertCanManageCourse(String courseId) {

@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.security.SecurityProperties;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -20,6 +21,8 @@ import vn.com.atomi.charge.base.model.enums.CustomHeader;
 import vn.com.atomi.charge.base.util.Util;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -31,6 +34,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AuthHeaderFilter extends OncePerRequestFilter {
 
+    @Value("${internal.service-key:}")
+    private String internalServiceKey;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, @Nonnull HttpServletResponse response, @Nonnull FilterChain filterChain) throws ServletException, IOException {
         String encodedUser = request.getHeader(CustomHeader.USER_INFO.getHeaderName());
@@ -38,6 +44,14 @@ public class AuthHeaderFilter extends OncePerRequestFilter {
         String permissions = request.getHeader(CustomHeader.PERMISSIONS.getHeaderName());
 
         if (StringUtils.hasText(encodedUser)) {
+            String providedKey = request.getHeader(CustomHeader.INTERNAL_SERVICE_KEY.getHeaderName());
+            if (!secureEquals(internalServiceKey, providedKey)) {
+                SecurityContextHolder.clearContext();
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"status\":\"FORBIDDEN\",\"message\":\"common.access_denied\"}");
+                return;
+            }
             try {
                 Map<?, ?> userInfo = Util.decodeBase64ToObject(encodedUser, Map.class);
                 String principal = StringUtils.hasText(userId) ? userId : resolvePrincipal(userInfo);
@@ -51,6 +65,15 @@ public class AuthHeaderFilter extends OncePerRequestFilter {
             }
         }
         filterChain.doFilter(request, response);
+    }
+
+    private boolean secureEquals(String expected, String actual) {
+        if (!StringUtils.hasText(expected) || !StringUtils.hasText(actual)) {
+            return false;
+        }
+        return MessageDigest.isEqual(
+                expected.getBytes(StandardCharsets.UTF_8),
+                actual.getBytes(StandardCharsets.UTF_8));
     }
 
     private String resolvePrincipal(Map<?, ?> userInfo) {

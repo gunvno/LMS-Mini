@@ -15,8 +15,9 @@ import vn.com.atomi.charge.quiz.model.entity.QuizEntity;
 import vn.com.atomi.charge.quiz.model.enums.QuizStatus;
 import vn.com.atomi.charge.quiz.repository.QuizAttemptRepository;
 import vn.com.atomi.charge.quiz.repository.QuizRepository;
-import vn.com.atomi.charge.quiz.repository.client.CourseClient;
+import vn.com.atomi.charge.quiz.client.CourseClient;
 import vn.com.atomi.charge.quiz.service.interfaces.QuizService;
+import vn.com.atomi.charge.quiz.service.internal.QuizConfigurationValidator;
 import vn.com.atomi.charge.base.model.request.BaseRequest;
 import vn.com.atomi.charge.base.model.response.BaseResponse;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +35,8 @@ implements QuizService {
     private CourseClient courseClient;
     @Autowired
     private QuizOwnershipService ownershipService;
+    @Autowired
+    private QuizConfigurationValidator configurationValidator;
 
     @Override
     public BaseResponse<Page<QuizDto>> getAll(Map<String, String> params, Pageable pageable) {
@@ -71,6 +74,9 @@ implements QuizService {
     @Transactional(rollbackFor = Exception.class)
     public BaseResponse<QuizDto> create(BaseRequest<QuizDto> request) {
         assertCanManageCourse(request.getData().getCourseId());
+        if (request.getData().getStatus() == QuizStatus.ACTIVE) {
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("quiz.invalid_configuration"));
+        }
         return super.create(request);
     }
 
@@ -81,6 +87,10 @@ implements QuizService {
                 .orElseThrow(() -> new AccessDeniedException("common.access_denied"));
         assertCanManageCourse(existing.getCourseId());
         assertCanManageCourse(request.getData().getCourseId());
+        if (request.getData().getStatus() == QuizStatus.ACTIVE
+                && !configurationValidator.isValid(existing.getId())) {
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("quiz.invalid_configuration"));
+        }
         return super.update(request);
     }
 

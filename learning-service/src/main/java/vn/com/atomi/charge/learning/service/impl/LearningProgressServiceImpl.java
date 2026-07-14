@@ -15,7 +15,7 @@ import vn.com.atomi.charge.learning.model.dto.LearningProgressDto;
 import vn.com.atomi.charge.learning.model.entity.EnrollmentEntity;
 import vn.com.atomi.charge.learning.model.entity.LearningProgressEntity;
 import vn.com.atomi.charge.learning.model.enums.LearningProgressStatus;
-import vn.com.atomi.charge.learning.repository.Client.CourseClient;
+import vn.com.atomi.charge.learning.client.CourseClient;
 import vn.com.atomi.charge.learning.repository.EnrollmentRepository;
 import vn.com.atomi.charge.learning.repository.LearningProgressRepository;
 import vn.com.atomi.charge.learning.service.interfaces.LearningProgressService;
@@ -36,7 +36,7 @@ implements LearningProgressService {
 
     @Override
     public BaseResponse<LearningProgressDto> startLesson(String lessonId){
-        response = new BaseResponse<>();
+        BaseResponse<LearningProgressDto> response = new BaseResponse<>();
         if(!courseClient.existsLessonById(lessonId)){
             String localizedMsg = i18n.getMessage("lesson.not_found");
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, localizedMsg);
@@ -74,7 +74,7 @@ implements LearningProgressService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BaseResponse<LearningProgressDto> finishLesson(String lessonId){
-        response = new BaseResponse<>();
+        BaseResponse<LearningProgressDto> response = new BaseResponse<>();
         if(!courseClient.existsLessonById(lessonId)){
             String localizedMsg = i18n.getMessage("lesson.not_found");
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, localizedMsg);

@@ -69,11 +69,11 @@ implements AnswerService {
         QuestionEntity question = questionRepository.findEntityById(questionId)
                 .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied"));
         assertCanManageQuestion(question);
-        response = new BaseResponse<>();
+        BaseResponse<AnswerDto> response = new BaseResponse<>();
         try {
-            getRequest();
 
             dto.getData().setQuestionId(questionId);
+            dto.getData().setOrderIndex(nextOrderIndex(questionId));
 
             if (isDuplicate(dto)) {
                 String localizedMsg = i18n.getMessage("common.already_exists");
@@ -93,6 +93,17 @@ implements AnswerService {
             response.setMessage(StringUtil.beautyError(ex));
         }
         return response;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BaseResponse<AnswerDto> create(BaseRequest<AnswerDto> request) {
+        String questionId = request.getData().getQuestionId();
+        QuestionEntity question = questionRepository.findEntityById(questionId)
+                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied"));
+        assertCanManageQuestion(question);
+        request.getData().setOrderIndex(nextOrderIndex(questionId));
+        return super.create(request);
     }
     @Override
     protected boolean isDuplicate(BaseRequest<AnswerDto> request) {
@@ -122,11 +133,8 @@ implements AnswerService {
         AnswerEntity answer = repository.findEntityById(request.getData().getId())
                 .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied"));
         assertCanManageAnswer(answer);
-        if (request.getData().getQuestionId() != null) {
-            QuestionEntity targetQuestion = questionRepository.findEntityById(request.getData().getQuestionId())
-                    .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied"));
-            assertCanManageQuestion(targetQuestion);
-        }
+        request.getData().setQuestionId(answer.getQuestionId());
+        request.getData().setOrderIndex(answer.getOrderIndex());
         return super.update(request);
     }
 
@@ -135,16 +143,43 @@ implements AnswerService {
         AnswerEntity answer = repository.findEntityById(id)
                 .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied"));
         assertCanManageAnswer(answer);
-        return super.delete(id);
+        BaseResponse<AnswerDto> result = super.delete(id);
+        normalizeAnswerOrder(answer.getQuestionId());
+        return result;
     }
 
     @Override
     public BaseResponse<AnswerDto> delete(List<String> ids) {
-        ids.stream()
+        List<AnswerEntity> answers = ids.stream()
                 .map(id -> repository.findEntityById(id)
                         .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("common.access_denied")))
-                .forEach(this::assertCanManageAnswer);
-        return super.delete(ids);
+                .toList();
+        answers.forEach(this::assertCanManageAnswer);
+        BaseResponse<AnswerDto> result = super.delete(ids);
+        answers.stream().map(AnswerEntity::getQuestionId).distinct().forEach(this::normalizeAnswerOrder);
+        return result;
+    }
+
+    private int nextOrderIndex(String questionId) {
+        return normalizeAnswerOrder(questionId) + 1;
+    }
+
+    private int normalizeAnswerOrder(String questionId) {
+        List<AnswerEntity> answers = repository
+                .findByQuestionIdAndDeletedAtIsNullOrderByOrderIndexAscCreatedDateAsc(questionId);
+        boolean changed = false;
+        for (int index = 0; index < answers.size(); index++) {
+            int expectedOrder = index + 1;
+            AnswerEntity answer = answers.get(index);
+            if (answer.getOrderIndex() == null || answer.getOrderIndex() != expectedOrder) {
+                answer.setOrderIndex(expectedOrder);
+                changed = true;
+            }
+        }
+        if (changed) {
+            repository.saveAll(answers);
+        }
+        return answers.size();
     }
 
     private void assertCanManageAnswer(AnswerEntity answer) {

@@ -22,6 +22,8 @@ config:
     learning: ${CONFIG_API_LEARNING}
     quiz: ${CONFIG_API_QUIZ}
     notice: ${CONFIG_API_NOTICE}
+    billing: ${CONFIG_API_BILLING}
+    chat: ${CONFIG_API_CHAT}
 
 spring:
   application:
@@ -44,13 +46,6 @@ spring:
         webflux:
           default-filters:
             - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin RETAIN_UNIQUE
-          globalcors:
-            cors-configurations:
-              '[/**]':
-                allowed-origins: "*"
-                allowed-methods: "*"
-                allowed-headers: "*"
-                allow-credentials: false
           discovery:
             locator:
               enabled: false
@@ -128,6 +123,20 @@ spring:
               filters:
                 - RewritePath=/course/(?<path>.*), /$\{path}
 
+            - id: lms-chat-websocket
+              uri: ${CONFIG_API_CHAT_WS:ws://localhost:8089}
+              predicates:
+                - Path=/chat/ws,/chat/ws/**
+              filters:
+                - RewritePath=/chat/(?<path>.*), /$\{path}
+
+            - id: lms-chat-service
+              uri: ${CONFIG_API_CHAT}
+              predicates:
+                - Path=/chat/**
+              filters:
+                - RewritePath=/chat/(?<path>.*), /$\{path}
+
             - id: lms-learning-service
               uri: ${CONFIG_API_LEARNING}
               predicates:
@@ -148,6 +157,13 @@ spring:
                 - Path=/notice/**
               filters:
                 - RewritePath=/notice/(?<path>.*), /$\{path}
+
+            - id: lms-billing-service
+              uri: ${CONFIG_API_BILLING}
+              predicates:
+                - Path=/billing/**
+              filters:
+                - RewritePath=/billing/(?<path>.*), /$\{path}
 
   main:
     allow-bean-definition-overriding: true
@@ -176,3 +192,7 @@ springdoc:
         url: /quiz/v3/api-docs
       - name: lms-notice-service
         url: /notice/v3/api-docs
+      - name: lms-billing-service
+        url: /billing/v3/api-docs
+      - name: lms-chat-service
+        url: /chat/v3/api-docs

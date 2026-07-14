@@ -27,13 +27,13 @@ import vn.com.atomi.charge.learning.model.enums.CertificateStatus;
 import vn.com.atomi.charge.learning.model.enums.EnrollmentStatus;
 import vn.com.atomi.charge.learning.model.enums.LearningProgressStatus;
 import vn.com.atomi.charge.learning.repository.CertificateRepository;
-import vn.com.atomi.charge.learning.repository.Client.AuthnClient;
-import vn.com.atomi.charge.learning.repository.Client.NoticeClient;
+import vn.com.atomi.charge.learning.client.AuthnClient;
+import vn.com.atomi.charge.learning.client.NoticeClient;
 import vn.com.atomi.charge.learning.model.dto.CourseNotificationDto;
 import vn.com.atomi.charge.learning.model.request.NoticeRequest;
 import vn.com.atomi.charge.learning.model.request.InternalMailRequest;
-import vn.com.atomi.charge.learning.repository.Client.CourseClient;
-import vn.com.atomi.charge.learning.repository.Client.QuizClient;
+import vn.com.atomi.charge.learning.client.CourseClient;
+import vn.com.atomi.charge.learning.client.QuizClient;
 import vn.com.atomi.charge.learning.repository.EnrollmentRepository;
 import vn.com.atomi.charge.learning.repository.LearningProgressRepository;
 import vn.com.atomi.charge.learning.service.interfaces.EnrollmentService;
@@ -61,9 +61,8 @@ public class EnrollmentServiceImpl extends BaseService<EnrollmentRepository,
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BaseResponse<EnrollmentDto> enrollCourse(BaseRequest<EnrollmentDto> dto, String courseId){
-        response = new BaseResponse<>();
+        BaseResponse<EnrollmentDto> response = new BaseResponse<>();
         try {
-            getRequest();
             String userId = currentUserId();
             if (userId == null || userId.isBlank()) {
                 return BaseResponse.fail(HttpStatus.UNAUTHORIZED, i18n.getMessage("user.not_found"));
@@ -114,7 +113,7 @@ public class EnrollmentServiceImpl extends BaseService<EnrollmentRepository,
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BaseResponse<EnrollmentDto> enrollCourseForUser(String userId, String courseId) {
-        response = new BaseResponse<>();
+        BaseResponse<EnrollmentDto> response = new BaseResponse<>();
         try {
             if (userId == null || userId.isBlank()) {
                 return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("user.not_found"));
@@ -248,7 +247,7 @@ public class EnrollmentServiceImpl extends BaseService<EnrollmentRepository,
     }
     @Override
     public BaseResponse<Page<EnrollmentDto>> getMyEnroll(Pageable pageable){
-        responsePage = new BaseResponse<>();
+        BaseResponse<Page<EnrollmentDto>> responsePage = new BaseResponse<>();
 
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -289,7 +288,7 @@ public class EnrollmentServiceImpl extends BaseService<EnrollmentRepository,
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BaseResponse<EnrollmentDto> finishCourse(String courseId){
-        response = new BaseResponse<>();
+        BaseResponse<EnrollmentDto> response = new BaseResponse<>();
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userId = authentication.getName();
         Optional<EnrollmentEntity> optionalEnrollment =
@@ -366,7 +365,7 @@ public class EnrollmentServiceImpl extends BaseService<EnrollmentRepository,
 
     @Override
     public BaseResponse<EnrollmentDto> findEnrollmentByCourseIdAndUserId(String courseId){
-        response = new BaseResponse<>();
+        BaseResponse<EnrollmentDto> response = new BaseResponse<>();
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userId = authentication.getName();
         if(courseId.isEmpty())

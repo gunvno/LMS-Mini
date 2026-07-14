@@ -2,6 +2,7 @@ package vn.com.atomi.charge.course.service.impl;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.data.domain.Page;
@@ -38,6 +39,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.List;
 import java.util.Locale;
+import java.nio.charset.StandardCharsets;
 
 @Service
 public class LessonResourceServiceImpl
@@ -177,7 +179,7 @@ public class LessonResourceServiceImpl
         String externalUrl
     ) {
         assertCanManageLesson(lessonId);
-        response = new BaseResponse<>();
+        BaseResponse<LessonResourceDto> response = new BaseResponse<>();
         try {
             if (!StringUtils.hasText(lessonId) || lessonRepository.findEntityById(lessonId).isEmpty()) {
                 return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("lesson.not_found"));
@@ -226,13 +228,15 @@ public class LessonResourceServiceImpl
         String contentType = StringUtils.hasText(file.contentType())
             ? file.contentType()
             : MediaType.APPLICATION_OCTET_STREAM_VALUE;
-        String disposition = attachment ? "attachment" : "inline";
         String fileName = fileName(resource.getFilePath(), resource.getTitle());
+        ContentDisposition contentDisposition = ContentDisposition
+            .builder(attachment ? "attachment" : "inline")
+            .filename(sanitizeFileName(fileName), StandardCharsets.UTF_8)
+            .build();
 
         return ResponseEntity.ok()
             .contentType(MediaType.parseMediaType(contentType))
-            .header(HttpHeaders.CONTENT_DISPOSITION,
-                disposition + "; filename=\"" + sanitizeFileName(fileName) + "\"")
+            .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
             .body(file.content());
     }
 

@@ -22,6 +22,6 @@ services:
       CONFIG_MINIO_SECRET_KEY: ${CONFIG_MINIO_SECRET_KEY:-minioadmin}
       CONFIG_MINIO_BUCKET: lms-mini
     ports:
-      - 8083:8083
+      - 127.0.0.1:8083:8083
     volumes:
       - ./logs:/app/logs

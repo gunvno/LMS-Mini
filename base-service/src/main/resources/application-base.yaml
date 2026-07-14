@@ -4,7 +4,7 @@ server:
     enabled: true
 
 internal:
-  service-key: ${INTERNAL_SERVICE_KEY:lms-mini-internal-change-me}
+  service-key: ${INTERNAL_SERVICE_KEY:}
 
 management:
   endpoint:

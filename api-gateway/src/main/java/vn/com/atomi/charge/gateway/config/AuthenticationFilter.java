@@ -27,6 +27,7 @@ import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import vn.com.atomi.charge.gateway.dto.AuthnUserInfoDto;
 import vn.com.atomi.charge.gateway.dto.BaseResponseDto;
 import vn.com.atomi.charge.gateway.dto.IntrospectRequestDto;
@@ -53,6 +54,9 @@ public class AuthenticationFilter implements WebFilter {
 
   @Value("${spring.profiles.active:default}")
   private String profile;
+
+  @Value("${internal.service-key:}")
+  private String internalServiceKey;
 
   ObjectMapper mapper = new ObjectMapper();
 
@@ -83,33 +87,24 @@ public class AuthenticationFilter implements WebFilter {
     }
 
     String token = authHeader.substring(7);
-    // Use feign client call to auth service verify token at here
-    boolean isValidate = isTokenValid(token);
-    if (!isValidate) {
-      return this.onError(exchange);
-    }
-    UserDto user;
-    try {
-      user = getUserInfo(token);
-    } catch (Exception e) {
-      return onError(exchange);
-    }
-    if (user == null) {
-      return chain.filter(exchange);
-    }
-    List<String> permissions = getUserPermissions(user.getId());
-    user.setPermissions(permissions);
+    return Mono.fromCallable(() -> resolveAuthenticatedUser(token))
+        .subscribeOn(Schedulers.boundedElastic())
+        .flatMap(resolved -> resolved.authenticated()
+            ? filterAuthenticated(exchange, chain, resolved)
+            : onError(exchange));
+  }
 
-    UsernamePasswordAuthenticationToken authentication =
-        new UsernamePasswordAuthenticationToken(user, null, toAuthorities(permissions));
-
-    SecurityContext context = new SecurityContextImpl(authentication);
-
-    String encodedUser = Base64.getEncoder()
-        .encodeToString(JsonUtil.convertObjectToJson(user).getBytes(StandardCharsets.UTF_8));
+  private Mono<Void> filterAuthenticated(ServerWebExchange exchange,
+                                         WebFilterChain chain,
+                                         AuthenticatedRequest resolved) {
+    ServerHttpRequest request = exchange.getRequest();
+    UserDto user = resolved.user();
+    List<String> permissions = resolved.permissions();
+    SecurityContext context = resolved.context();
+    String encodedUser = resolved.encodedUser();
 
     // POST → need read body
-    if (request.getMethod() == HttpMethod.POST) {
+    if (request.getMethod() == HttpMethod.POST && isTextContent(request.getHeaders().getContentType())) {
       return DataBufferUtils.join(request.getBody()).flatMap(buffer -> {
         byte[] bodyBytes = new byte[buffer.readableByteCount()];
         buffer.read(bodyBytes);
@@ -172,6 +167,41 @@ public class AuthenticationFilter implements WebFilter {
     return forward(exchange, user, encodedUser, permissions, context, chain);
   }
 
+  private AuthenticatedRequest resolveAuthenticatedUser(String token) {
+    if (!isTokenValid(token)) {
+      return AuthenticatedRequest.invalid();
+    }
+    try {
+      UserDto user = getUserInfo(token);
+      if (user == null) {
+        return AuthenticatedRequest.invalid();
+      }
+      List<String> permissions = getUserPermissions(user.getId());
+      user.setPermissions(permissions);
+      UsernamePasswordAuthenticationToken authentication =
+          new UsernamePasswordAuthenticationToken(user, null, toAuthorities(permissions));
+      SecurityContext context = new SecurityContextImpl(authentication);
+      String encodedUser = Base64.getEncoder()
+          .encodeToString(JsonUtil.convertObjectToJson(user).getBytes(StandardCharsets.UTF_8));
+      return new AuthenticatedRequest(true, user, permissions, context, encodedUser);
+    } catch (Exception exception) {
+      log.warn("Unable to resolve authenticated user: {}", exception.getMessage());
+      return AuthenticatedRequest.invalid();
+    }
+  }
+
+  private record AuthenticatedRequest(
+      boolean authenticated,
+      UserDto user,
+      List<String> permissions,
+      SecurityContext context,
+      String encodedUser) {
+
+    private static AuthenticatedRequest invalid() {
+      return new AuthenticatedRequest(false, null, List.of(), null, null);
+    }
+  }
+
   private boolean isTextContent(MediaType contentType) {
     if (contentType == null) return false;
 
@@ -203,10 +233,13 @@ public class AuthenticationFilter implements WebFilter {
     };
 
     ServerHttpRequest newRequest = request.mutate()
-        .header("X-User-Info", encodedUser)
-        .header("X-User", user.getId())
-        .header("X-Role-Code", user.getRoleCode())
-        .header("X-Permissions", String.join(",", permissions))
+        .headers(headers -> {
+          headers.set("X-User-Info", encodedUser);
+          headers.set("X-User", user.getId());
+          headers.set("X-Role-Code", user.getRoleCode());
+          headers.set("X-Permissions", String.join(",", permissions));
+          headers.set("X-Internal-Service-Key", internalServiceKey);
+        })
         .build();
 
     ServerWebExchange newExchange = exchange.mutate()

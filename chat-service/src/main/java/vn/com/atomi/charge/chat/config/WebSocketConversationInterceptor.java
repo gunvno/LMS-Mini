@@ -12,9 +12,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 import vn.com.atomi.charge.chat.model.exception.ChatException;
-import vn.com.atomi.charge.chat.service.impl.ConversationAccessService;
-import vn.com.atomi.charge.chat.service.impl.AuthenticatedChatUserService;
-import vn.com.atomi.charge.chat.service.impl.SupportConversationAccessService;
+import vn.com.atomi.charge.chat.security.ConversationAccessService;
+import vn.com.atomi.charge.chat.security.AuthenticatedChatUserService;
+import vn.com.atomi.charge.chat.security.SupportConversationAccessService;
 
 import java.util.List;
 import java.util.regex.Matcher;

@@ -27,8 +27,9 @@ import vn.com.atomi.charge.quiz.repository.QuestionRepository;
 import vn.com.atomi.charge.quiz.repository.QuizAttemptRepository;
 import vn.com.atomi.charge.quiz.repository.QuizAttemptAnswerRepository;
 import vn.com.atomi.charge.quiz.repository.QuizRepository;
-import vn.com.atomi.charge.quiz.repository.client.LearningClient;
+import vn.com.atomi.charge.quiz.client.LearningClient;
 import vn.com.atomi.charge.quiz.service.interfaces.QuizAttemptService;
+import vn.com.atomi.charge.quiz.service.internal.QuizConfigurationValidator;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -56,9 +57,11 @@ public class QuizAttemptServiceImpl extends BaseService<QuizAttemptRepository, Q
     private ApplicationEventPublisher eventPublisher;
     @Autowired
     private QuizOwnershipService ownershipService;
+    @Autowired
+    private QuizConfigurationValidator configurationValidator;
     @Override
     public BaseResponse<QuizAttemptDto> startQuiz(String QuizId){
-        response = new BaseResponse<>();
+        BaseResponse<QuizAttemptDto> response = new BaseResponse<>();
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userId = authentication.getName();
         if (QuizId == null || QuizId.isBlank())
@@ -71,6 +74,9 @@ public class QuizAttemptServiceImpl extends BaseService<QuizAttemptRepository, Q
         ownershipService.assertCanViewQuiz(quiz);
         if (quiz.getStatus() != QuizStatus.ACTIVE) {
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("quiz.invalid_status"));
+        }
+        if (!configurationValidator.isValid(quiz.getId())) {
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("quiz.invalid_configuration"));
         }
 
         BaseResponse<EnrollmentDto> enrollmentResponse = learningClient.findEnrollment(optionalQuiz.get().getCourseId());
@@ -116,7 +122,7 @@ public class QuizAttemptServiceImpl extends BaseService<QuizAttemptRepository, Q
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BaseResponse<QuizAttemptDto> submitQuiz(String attemptId, BaseRequest<QuizAttemptDto> request) {
-        response = new BaseResponse<>();
+        BaseResponse<QuizAttemptDto> response = new BaseResponse<>();
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userId = authentication.getName();
 
@@ -141,14 +147,21 @@ public class QuizAttemptServiceImpl extends BaseService<QuizAttemptRepository, Q
 
         QuizEntity quiz = optionalQuiz.get();
         ownershipService.assertCanViewQuiz(quiz);
+        if (quiz.getStatus() != QuizStatus.ACTIVE || !configurationValidator.isValid(quiz.getId())) {
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("quiz.invalid_configuration"));
+        }
         List<QuestionEntity> questions = questionRepository.findByQuizIdAndDeletedAtIsNullOrderByOrderIndexAsc(quiz.getId());
         List<QuizAttemptAnswerInputDto> submittedAnswers = request == null || request.getData() == null || request.getData().getAnswers() == null
                 ? Collections.emptyList()
                 : request.getData().getAnswers();
         List<QuizAttemptAnswerEntity> attemptAnswers = new ArrayList<>();
-        BigDecimal totalScore = BigDecimal.ZERO;
+        BigDecimal earnedScore = BigDecimal.ZERO;
+        BigDecimal maximumScore = BigDecimal.ZERO;
+        int correctAnswers = 0;
 
         for (QuestionEntity question : questions) {
+            BigDecimal questionScore = positiveScore(question.getScore());
+            maximumScore = maximumScore.add(questionScore);
             List<AnswerEntity> questionAnswers = answerRepository.findByQuestionIdAndDeletedAtIsNullOrderByOrderIndexAsc(question.getId());
             QuizAttemptAnswerInputDto submittedItem = findSubmittedAnswer(submittedAnswers, question.getId());
             String selectedAnswerId = submittedItem == null || submittedItem.getAnswerId() == null
@@ -169,15 +182,18 @@ public class QuizAttemptServiceImpl extends BaseService<QuizAttemptRepository, Q
 
             AnswerEntity selectedAnswer = optionalSelectedAnswer.get();
             boolean isCorrect = Boolean.TRUE.equals(selectedAnswer.getCorrect());
-            BigDecimal rowScore = isCorrect ? question.getScore() : BigDecimal.ZERO;
-            totalScore = totalScore.add(rowScore);
+            BigDecimal rowScore = isCorrect ? questionScore : BigDecimal.ZERO;
+            earnedScore = earnedScore.add(rowScore);
+            if (isCorrect) {
+                correctAnswers++;
+            }
             attemptAnswers.add(buildAttemptAnswer(attempt.getId(), question.getId(), selectedAnswerId, isCorrect, rowScore, userId));
         }
 
         quizAttemptAnswerRepository.saveAll(attemptAnswers);
 
-        attempt.setScore(totalScore.setScale(2, RoundingMode.HALF_UP));
-        attempt.setPassed(attempt.getScore().compareTo(quiz.getPassScore()) >= 0);
+        attempt.setScore(calculatePercentageScore(earnedScore, maximumScore));
+        attempt.setPassed(hasPassed(attempt.getScore(), quiz.getPassScore(), maximumScore));
         attempt.setSubmittedAt(LocalDateTime.now());
         attempt.setStatus(QuizAttemptStatus.SUBMITTED);
         attempt.setLastModifiedBy(userId);
@@ -187,9 +203,33 @@ public class QuizAttemptServiceImpl extends BaseService<QuizAttemptRepository, Q
         if (Boolean.TRUE.equals(saved.getPassed())) {
             eventPublisher.publishEvent(new CourseCompletionEvaluationEvent(quiz.getCourseId()));
         }
-        response.setData(mapper.toDto(saved));
+        QuizAttemptDto result = mapper.toDto(saved);
+        result.setTotalQuestions(questions.size());
+        result.setCorrectAnswers(correctAnswers);
+        response.setData(result);
         response.setStatus(HttpStatus.OK);
         return response;
+    }
+
+    static BigDecimal calculatePercentageScore(BigDecimal earnedScore, BigDecimal maximumScore) {
+        if (earnedScore == null || maximumScore == null || maximumScore.signum() <= 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        return earnedScore
+                .multiply(BigDecimal.valueOf(100))
+                .divide(maximumScore, 2, RoundingMode.HALF_UP);
+    }
+
+    static boolean hasPassed(BigDecimal percentageScore, BigDecimal passScore, BigDecimal maximumScore) {
+        return percentageScore != null
+                && passScore != null
+                && maximumScore != null
+                && maximumScore.signum() > 0
+                && percentageScore.compareTo(passScore) >= 0;
+    }
+
+    private BigDecimal positiveScore(BigDecimal score) {
+        return score != null && score.signum() > 0 ? score : BigDecimal.ZERO;
     }
 
     private QuizAttemptAnswerInputDto findSubmittedAnswer(List<QuizAttemptAnswerInputDto> submittedAnswers, String questionId) {
