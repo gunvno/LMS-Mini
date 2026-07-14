@@ -1,5 +1,4 @@
--- Migration gộp invoice-service vào billing-service.
--- Script giữ nguyên database lms_invoice_service để có thể đối soát/rollback sau khi chuyển dữ liệu.
+-- Khởi tạo và đồng bộ hóa đơn trong billing-service.
 CREATE DATABASE IF NOT EXISTS lms_billing_service CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE lms_billing_service;
 
@@ -27,32 +26,6 @@ CREATE TABLE IF NOT EXISTS tbl_invoices (
     KEY idx_invoices_issued_at (issued_at),
     KEY idx_invoices_deleted_at (deleted_at)
 );
-
--- Chuyển hóa đơn từ database invoice cũ nếu bảng cũ tồn tại.
-SET @legacy_invoice_table_exists = (
-    SELECT COUNT(*)
-    FROM information_schema.tables
-    WHERE table_schema = 'lms_invoice_service'
-      AND table_name = 'tbl_invoices'
-);
-
-SET @copy_legacy_invoices_sql = IF(
-    @legacy_invoice_table_exists > 0,
-    'INSERT IGNORE INTO lms_billing_service.tbl_invoices (
-        id, version, created_by, created_date, last_modified_by, last_modified_date,
-        deleted_at, payment_id, invoice_code, user_id, course_id, amount, provider,
-        provider_transaction_id, status, issued_at, paid_at
-     )
-     SELECT id, version, created_by, created_date, last_modified_by, last_modified_date,
-        deleted_at, payment_id, invoice_code, user_id, course_id, amount, provider,
-        provider_transaction_id, status, issued_at, paid_at
-     FROM lms_invoice_service.tbl_invoices',
-    'SELECT ''Không có bảng invoice cũ, bỏ qua bước sao chép'' AS migration_message'
-);
-
-PREPARE copy_legacy_invoices_stmt FROM @copy_legacy_invoices_sql;
-EXECUTE copy_legacy_invoices_stmt;
-DEALLOCATE PREPARE copy_legacy_invoices_stmt;
 
 -- Bổ sung các payment PAID chưa từng sinh hóa đơn.
 INSERT IGNORE INTO lms_billing_service.tbl_invoices (

@@ -163,12 +163,6 @@ spring:
                 - Path=/billing/**
               filters:
                 - RewritePath=/billing/(?<path>.*), /$\{path}
-            - id: lms-billing-invoice-legacy-route
-              uri: lb://lms-billing-service
-              predicates:
-                - Path=/invoice/**
-              filters:
-                - RewritePath=/invoice/(?<path>.*), /$\{path}
   main:
     allow-bean-definition-overriding: true
 
