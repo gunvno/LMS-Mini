@@ -10,7 +10,7 @@ import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Component;
-import vn.com.atomi.charge.chat.exception.ChatException;
+import vn.com.atomi.charge.chat.model.exception.ChatException;
 import vn.com.atomi.charge.chat.service.impl.ConversationAccessService;
 
 import java.util.List;

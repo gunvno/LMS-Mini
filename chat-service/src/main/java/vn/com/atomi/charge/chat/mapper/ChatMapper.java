@@ -1,4 +1,4 @@
-package vn.com.atomi.charge.chat.service.impl;
+package vn.com.atomi.charge.chat.mapper;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -6,18 +6,33 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import vn.com.atomi.charge.chat.model.dto.RecommendedCourseDto;
+import vn.com.atomi.charge.chat.model.entity.ChatConversationEntity;
 import vn.com.atomi.charge.chat.model.entity.ChatMessageEntity;
+import vn.com.atomi.charge.chat.model.response.ChatConversationResponse;
 import vn.com.atomi.charge.chat.model.response.ChatMessageResponse;
 
 import java.util.List;
 
 @Component
 @RequiredArgsConstructor
-public class ChatMessageMapper {
+public class ChatMapper {
 
     private final ObjectMapper objectMapper;
 
-    public ChatMessageResponse toResponse(ChatMessageEntity entity) {
+    public ChatConversationResponse toConversationResponse(
+            ChatConversationEntity entity,
+            String accessToken) {
+        return new ChatConversationResponse(
+                entity.getId(),
+                accessToken,
+                entity.getStatus(),
+                entity.isAssistantProcessing(),
+                entity.getLastMessage(),
+                entity.getLastMessageAt(),
+                entity.getCreatedDate());
+    }
+
+    public ChatMessageResponse toMessageResponse(ChatMessageEntity entity) {
         return new ChatMessageResponse(
                 entity.getId(),
                 entity.getConversationId(),
@@ -41,7 +56,8 @@ public class ChatMessageMapper {
             return List.of();
         }
         try {
-            return objectMapper.readValue(json, new TypeReference<>() {});
+            return objectMapper.readValue(json, new TypeReference<>() {
+            });
         } catch (Exception exception) {
             return List.of();
         }

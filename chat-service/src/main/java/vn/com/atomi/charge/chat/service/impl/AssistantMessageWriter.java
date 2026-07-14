@@ -3,7 +3,9 @@ package vn.com.atomi.charge.chat.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import vn.com.atomi.charge.chat.mapper.ChatMapper;
 import vn.com.atomi.charge.chat.model.dto.AiAnswer;
+import vn.com.atomi.charge.chat.model.dto.RecommendedCourseDto;
 import vn.com.atomi.charge.chat.model.entity.ChatConversationEntity;
 import vn.com.atomi.charge.chat.model.entity.ChatMessageEntity;
 import vn.com.atomi.charge.chat.model.enums.ChatSenderType;
@@ -20,7 +22,7 @@ public class AssistantMessageWriter {
 
     private final ChatConversationRepository conversationRepository;
     private final ChatMessageRepository messageRepository;
-    private final ChatMessageMapper messageMapper;
+    private final ChatMapper chatMapper;
     private final ChatRealtimePublisher realtimePublisher;
 
     @Transactional
@@ -40,7 +42,7 @@ public class AssistantMessageWriter {
     private void write(
             String conversationId,
             String content,
-            List<vn.com.atomi.charge.chat.model.dto.RecommendedCourseDto> recommendations,
+            List<RecommendedCourseDto> recommendations,
             boolean error) {
         ChatConversationEntity conversation = conversationRepository.findEntityById(conversationId)
                 .orElse(null);
@@ -50,7 +52,7 @@ public class AssistantMessageWriter {
         message.setConversationId(conversationId);
         message.setSenderType(ChatSenderType.ASSISTANT);
         message.setContent(content);
-        message.setRecommendationsJson(messageMapper.writeRecommendations(recommendations));
+        message.setRecommendationsJson(chatMapper.writeRecommendations(recommendations));
         message.setErrorMessage(error);
         message = messageRepository.save(message);
 
@@ -59,7 +61,7 @@ public class AssistantMessageWriter {
         conversation.setLastMessageAt(LocalDateTime.now());
         conversationRepository.save(conversation);
 
-        ChatMessageResponse response = messageMapper.toResponse(message);
+        ChatMessageResponse response = chatMapper.toMessageResponse(message);
         realtimePublisher.publish(
                 error ? "ASSISTANT_ERROR" : "ASSISTANT_MESSAGE_CREATED",
                 conversationId,

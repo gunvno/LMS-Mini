@@ -1,7 +1,9 @@
 package vn.com.atomi.charge.payment.repository;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,6 +17,20 @@ import java.util.Optional;
 public interface PaymentRepository extends BaseRepository<PaymentEntity, String> {
     Optional<PaymentEntity> findFirstByProviderOrderCodeAndDeletedAtIsNull(Long providerOrderCode);
     Optional<PaymentEntity> findFirstByUserIdAndProviderOrderCodeAndDeletedAtIsNull(String userId, Long providerOrderCode);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select payment
+              from PaymentEntity payment
+             where payment.userId = :userId
+               and payment.providerOrderCode = :orderCode
+               and payment.deletedAt is null
+            """)
+    Optional<PaymentEntity> findForUpdateByUserIdAndOrderCode(
+            @Param("userId") String userId,
+            @Param("orderCode") Long orderCode
+    );
+
     Optional<PaymentEntity> findFirstByUserIdAndInvoiceCodeAndDeletedAtIsNull(String userId, String invoiceCode);
     Optional<PaymentEntity> findFirstByUserIdAndCourseIdAndStatusAndDeletedAtIsNullOrderByCreatedDateDesc(
             String userId,

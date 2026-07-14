@@ -5,12 +5,13 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import vn.com.atomi.charge.chat.exception.ChatException;
+import vn.com.atomi.charge.chat.mapper.ChatMapper;
 import vn.com.atomi.charge.chat.model.entity.ChatConversationEntity;
 import vn.com.atomi.charge.chat.model.entity.ChatMessageEntity;
 import vn.com.atomi.charge.chat.model.enums.ChatSenderType;
 import vn.com.atomi.charge.chat.model.enums.ConversationStatus;
 import vn.com.atomi.charge.chat.model.event.UserMessageCreatedEvent;
+import vn.com.atomi.charge.chat.model.exception.ChatException;
 import vn.com.atomi.charge.chat.model.request.SendChatMessageRequest;
 import vn.com.atomi.charge.chat.model.response.ChatConversationResponse;
 import vn.com.atomi.charge.chat.model.response.ChatMessageResponse;
@@ -29,7 +30,7 @@ public class ChatServiceImpl implements ChatService {
     private final ChatMessageRepository messageRepository;
     private final ConversationTokenService tokenService;
     private final ConversationAccessService accessService;
-    private final ChatMessageMapper messageMapper;
+    private final ChatMapper chatMapper;
     private final ChatRealtimePublisher realtimePublisher;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -42,12 +43,12 @@ public class ChatServiceImpl implements ChatService {
         entity.setStatus(ConversationStatus.ACTIVE);
         entity.setAssistantProcessing(false);
         entity = conversationRepository.save(entity);
-        return toResponse(entity, accessToken);
+        return chatMapper.toConversationResponse(entity, accessToken);
     }
 
     @Override
     public ChatConversationResponse getConversation(String conversationId, String accessToken) {
-        return toResponse(accessService.require(conversationId, accessToken), null);
+        return chatMapper.toConversationResponse(accessService.require(conversationId, accessToken), null);
     }
 
     @Override
@@ -56,7 +57,7 @@ public class ChatServiceImpl implements ChatService {
         return messageRepository
                 .findByConversationIdAndDeletedAtIsNullOrderByCreatedDateAsc(conversationId)
                 .stream()
-                .map(messageMapper::toResponse)
+                .map(chatMapper::toMessageResponse)
                 .toList();
     }
 
@@ -91,20 +92,9 @@ public class ChatServiceImpl implements ChatService {
         conversation.setLastMessageAt(now);
         conversationRepository.save(conversation);
 
-        ChatMessageResponse response = messageMapper.toResponse(message);
+        ChatMessageResponse response = chatMapper.toMessageResponse(message);
         realtimePublisher.publish("MESSAGE_CREATED", conversationId, response);
         eventPublisher.publishEvent(new UserMessageCreatedEvent(conversationId));
         return response;
-    }
-
-    private ChatConversationResponse toResponse(ChatConversationEntity entity, String accessToken) {
-        return new ChatConversationResponse(
-                entity.getId(),
-                accessToken,
-                entity.getStatus(),
-                entity.isAssistantProcessing(),
-                entity.getLastMessage(),
-                entity.getLastMessageAt(),
-                entity.getCreatedDate());
     }
 }

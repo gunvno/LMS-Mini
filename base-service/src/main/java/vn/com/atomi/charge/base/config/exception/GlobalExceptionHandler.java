@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.support.WebExchangeBindException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.MethodNotAllowedException;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebInputException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -73,6 +74,21 @@ public class GlobalExceptionHandler {
         log.warn("resource not found: {}", Util.beautyError(ex));
         return createErrorResponse(BaseErrorCode.NOT_FOUND,
                 messageService.getMessage("common.not_found"), HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<BaseResponse<Void>> handleResponseStatusException(ResponseStatusException ex) {
+        HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
+        BaseErrorCode errorCode = status == HttpStatus.NOT_FOUND
+                ? BaseErrorCode.NOT_FOUND
+                : status.is4xxClientError() ? BaseErrorCode.BAD_REQUEST : BaseErrorCode.INTERNAL_ERROR;
+        if (status.is5xxServerError()) {
+            log.error("Response status error {}: {}", status.value(), Util.beautyError(ex));
+        } else {
+            log.debug("Response status {}: {}", status.value(), ex.getReason());
+        }
+        return createErrorResponse(errorCode,
+                StringUtils.defaultIfBlank(ex.getReason(), status.getReasonPhrase()), status);
     }
 
     @ExceptionHandler(AccessDeniedException.class)

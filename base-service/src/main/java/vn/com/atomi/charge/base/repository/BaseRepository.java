@@ -27,11 +27,17 @@ public interface BaseRepository<E extends BaseEntity, I> extends JpaRepository<E
 
     @Modifying
     @Query("UPDATE #{#entityName} E set E.deletedAt = :deletedAt, E.lastModifiedBy = :username, E.lastModifiedDate = :now where E.id = :id")
-    int softDelete(@Param("id") I id, @Param("deletedAt") LocalDateTime deletedAt, @Param("now") LocalDateTime now);
+    int softDelete(@Param("id") I id,
+                   @Param("deletedAt") LocalDateTime deletedAt,
+                   @Param("username") String username,
+                   @Param("now") LocalDateTime now);
 
     @Modifying
     @Query("UPDATE #{#entityName} E set E.deletedAt = :deletedAt, E.lastModifiedBy = :username, E.lastModifiedDate = :now where E.id in :ids")
-    int softDelete(@Param("ids") Iterable<I> ids, @Param("deletedAt") LocalDateTime deletedAt, @Param("now") LocalDateTime now);
+    int softDelete(@Param("ids") Iterable<I> ids,
+                   @Param("deletedAt") LocalDateTime deletedAt,
+                   @Param("username") String username,
+                   @Param("now") LocalDateTime now);
 
     @Modifying
     @Query("UPDATE #{#entityName} E set E.deletedAt = :deletedAt, E.lastModifiedBy = :username, E.lastModifiedDate = :now where E.createdBy = :username AND E.id = :id")

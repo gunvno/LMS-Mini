@@ -84,7 +84,7 @@ public class AuthorServiceImpl implements AuthorService {
 
 		List<RolePermissionEntity> existing = rolePermissionRepository.findByRoleIdAndDeletedAtIsNull(role.getId());
 		if (!existing.isEmpty()) {
-			rolePermissionRepository.softDelete(existing.stream().map(RolePermissionEntity::getId).toList(), LocalDateTime.now(), LocalDateTime.now());
+			rolePermissionRepository.softDelete(existing.stream().map(RolePermissionEntity::getId).toList(), LocalDateTime.now(), Optional.ofNullable(currentUserId()).orElse("system"), LocalDateTime.now());
 		}
 
 		for (String permissionCode : permissionCodes) {
@@ -215,7 +215,7 @@ public class AuthorServiceImpl implements AuthorService {
 		RoleEntity instructorRole = findRole(RoleCode.INSTRUCTOR.name());
 		List<RolePermissionEntity> existing = rolePermissionRepository.findByRoleIdAndDeletedAtIsNull(instructorRole.getId());
 		if (!existing.isEmpty()) {
-			rolePermissionRepository.softDelete(existing.stream().map(RolePermissionEntity::getId).toList(), LocalDateTime.now(), LocalDateTime.now());
+			rolePermissionRepository.softDelete(existing.stream().map(RolePermissionEntity::getId).toList(), LocalDateTime.now(), Optional.ofNullable(currentUserId()).orElse("system"), LocalDateTime.now());
 		}
 
 		for (String permissionCode : permissionCodes) {

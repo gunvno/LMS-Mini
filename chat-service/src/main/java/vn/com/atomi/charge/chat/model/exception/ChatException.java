@@ -1,4 +1,4 @@
-package vn.com.atomi.charge.chat.exception;
+package vn.com.atomi.charge.chat.model.exception;
 
 import lombok.Getter;
 import org.springframework.http.HttpStatus;

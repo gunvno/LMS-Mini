@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import vn.com.atomi.charge.chat.exception.ChatException;
+import vn.com.atomi.charge.chat.model.exception.ChatException;
 import vn.com.atomi.charge.chat.model.entity.ChatConversationEntity;
 import vn.com.atomi.charge.chat.repository.ChatConversationRepository;
 

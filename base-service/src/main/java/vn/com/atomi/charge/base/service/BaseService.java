@@ -160,7 +160,8 @@ public abstract class BaseService<
         String localizedMsg = i18n.getMessage("common.not_found");
         return BaseResponse.fail(HttpStatus.BAD_REQUEST, localizedMsg);
       }
-      int result = repository.softDelete(id, LocalDateTime.now(), LocalDateTime.now());
+      String username = currentUsername();
+      repository.softDelete(id, LocalDateTime.now(), username, LocalDateTime.now());
       response.setStatus(HttpStatus.OK);
     } catch (Exception ex) {
       response.setStatus(HttpStatus.BAD_REQUEST);
@@ -175,7 +176,8 @@ public abstract class BaseService<
   public BaseResponse<D> delete(List<String> ids) {
     response = new BaseResponse<>();
     try {
-      int result = repository.softDelete(ids, LocalDateTime.now(), LocalDateTime.now());
+      String username = currentUsername();
+      repository.softDelete(ids, LocalDateTime.now(), username, LocalDateTime.now());
       response.setStatus(HttpStatus.OK);
     } catch (Exception ex) {
       response.setStatus(HttpStatus.BAD_REQUEST);
@@ -187,5 +189,12 @@ public abstract class BaseService<
 
   protected boolean isDuplicate(BaseRequest<D> dto) {
     return false; // Override trong subclass nếu cần kiểm tra trùng lặp
+  }
+
+  private String currentUsername() {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    return authentication != null && authentication.getName() != null
+        ? authentication.getName()
+        : "system";
   }
 }

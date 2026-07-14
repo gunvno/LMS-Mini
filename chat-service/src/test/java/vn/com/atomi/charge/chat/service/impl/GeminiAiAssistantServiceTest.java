@@ -13,7 +13,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import vn.com.atomi.charge.base.model.response.BaseResponse;
-import vn.com.atomi.charge.chat.client.CourseCatalogDto;
+import vn.com.atomi.charge.chat.model.dto.CourseCatalogDto;
 import vn.com.atomi.charge.chat.client.CourseClient;
 import vn.com.atomi.charge.chat.model.dto.AiAnswer;
 import vn.com.atomi.charge.chat.model.entity.ChatMessageEntity;

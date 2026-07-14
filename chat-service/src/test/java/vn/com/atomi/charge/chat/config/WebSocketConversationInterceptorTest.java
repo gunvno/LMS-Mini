@@ -6,7 +6,7 @@ import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import vn.com.atomi.charge.chat.exception.ChatException;
+import vn.com.atomi.charge.chat.model.exception.ChatException;
 import vn.com.atomi.charge.chat.model.entity.ChatConversationEntity;
 import vn.com.atomi.charge.chat.service.impl.ConversationAccessService;
 

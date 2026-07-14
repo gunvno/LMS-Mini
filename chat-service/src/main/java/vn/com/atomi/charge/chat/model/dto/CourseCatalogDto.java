@@ -1,4 +1,4 @@
-package vn.com.atomi.charge.chat.client;
+package vn.com.atomi.charge.chat.model.dto;
 
 import java.math.BigDecimal;
 
