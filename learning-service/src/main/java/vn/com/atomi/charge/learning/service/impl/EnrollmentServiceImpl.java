@@ -383,6 +383,11 @@ public class EnrollmentServiceImpl extends BaseService<EnrollmentRepository,
     @Override
     public boolean hasCurrentUserCourseAccess(String courseId) {
         String userId = currentUserId();
+        return hasUserCourseAccess(userId, courseId);
+    }
+
+    @Override
+    public boolean hasUserCourseAccess(String userId, String courseId) {
         if (userId == null || userId.isBlank() || courseId == null || courseId.isBlank()) {
             return false;
         }

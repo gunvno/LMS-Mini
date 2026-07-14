@@ -20,6 +20,7 @@ public interface EnrollmentService extends IBaseService<EnrollmentRepository, En
     BaseResponse<EnrollmentDto> findEnrollmentByCourseIdAndUserId(String courseId);
     BaseResponse<EnrollmentDto> enrollCourseForUser(String userId, String courseId);
     boolean hasCurrentUserCourseAccess(String courseId);
+    boolean hasUserCourseAccess(String userId, String courseId);
     List<String> getCurrentUserAccessibleCourseIds();
     List<String> getCurrentUserAccessibleLessonIds(String courseId);
 }

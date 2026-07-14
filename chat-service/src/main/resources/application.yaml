@@ -54,7 +54,7 @@ config:
       - /ws
       - /ws/**
   websocket:
-    allowed-origins: ${CHAT_ALLOWED_ORIGINS:http://localhost:3001}
+    allowed-origins: ${CHAT_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}
   gemini:
     api-key: ${GEMINI_API_KEY:}
     base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}

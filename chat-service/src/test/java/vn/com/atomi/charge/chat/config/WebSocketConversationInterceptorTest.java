@@ -9,6 +9,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import vn.com.atomi.charge.chat.model.exception.ChatException;
 import vn.com.atomi.charge.chat.model.entity.ChatConversationEntity;
 import vn.com.atomi.charge.chat.service.impl.ConversationAccessService;
+import vn.com.atomi.charge.chat.service.impl.AuthenticatedChatUserService;
+import vn.com.atomi.charge.chat.service.impl.SupportConversationAccessService;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.util.List;
 
@@ -20,8 +23,10 @@ import static org.mockito.Mockito.when;
 class WebSocketConversationInterceptorTest {
 
     private final ConversationAccessService accessService = mock(ConversationAccessService.class);
+    private final SupportConversationAccessService supportAccessService = mock(SupportConversationAccessService.class);
+    private final AuthenticatedChatUserService authenticatedUserService = mock(AuthenticatedChatUserService.class);
     private final WebSocketConversationInterceptor interceptor =
-            new WebSocketConversationInterceptor(accessService);
+            new WebSocketConversationInterceptor(accessService, supportAccessService, authenticatedUserService);
 
     @Test
     void connectAuthenticatesConversationToken() {
@@ -43,11 +48,25 @@ class WebSocketConversationInterceptorTest {
     void subscriptionToAnotherConversationIsRejected() {
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
         accessor.setDestination("/topic/chat/conversations/conversation-b");
-        accessor.setUser(new UsernamePasswordAuthenticationToken("conversation-a", null, List.of()));
+        accessor.setUser(new UsernamePasswordAuthenticationToken(
+                "conversation-a", null, List.of(new SimpleGrantedAuthority("AI_CHAT"))));
 
         assertThatThrownBy(() -> interceptor.preSend(
                 message(accessor), mock(org.springframework.messaging.MessageChannel.class)))
                 .isInstanceOf(ChatException.class);
+    }
+
+    @Test
+    void supportConnectUsesAuthenticatedUser() {
+        when(authenticatedUserService.requireUserId("Bearer jwt-token")).thenReturn("user-a");
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.CONNECT);
+        accessor.setNativeHeader("Authorization", "Bearer jwt-token");
+
+        Message<?> result = interceptor.preSend(message(accessor), mock(org.springframework.messaging.MessageChannel.class));
+
+        assertThat(StompHeaderAccessor.wrap(result).getUser())
+                .extracting(java.security.Principal::getName)
+                .isEqualTo("user-a");
     }
 
     @Test

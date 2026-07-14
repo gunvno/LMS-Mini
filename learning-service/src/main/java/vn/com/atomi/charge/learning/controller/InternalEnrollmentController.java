@@ -32,6 +32,11 @@ public class InternalEnrollmentController {
         return enrollmentService.hasCurrentUserCourseAccess(courseId);
     }
 
+    @GetMapping("/users/{userId}/courses/{courseId}/access")
+    public Boolean hasUserCourseAccess(@PathVariable String userId, @PathVariable String courseId) {
+        return enrollmentService.hasUserCourseAccess(userId, courseId);
+    }
+
     @GetMapping("/course-ids/access")
     public List<String> getAccessibleCourseIds() {
         return enrollmentService.getCurrentUserAccessibleCourseIds();

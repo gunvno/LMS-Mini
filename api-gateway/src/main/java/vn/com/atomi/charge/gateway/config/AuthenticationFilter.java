@@ -1,5 +1,6 @@
 package vn.com.atomi.charge.gateway.config;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -124,16 +125,24 @@ public class AuthenticationFilter implements WebFilter {
           if (!StringUtils.hasText(bodyString)) {
             return forward(exchange, request, null, user, encodedUser, permissions, context, chain);
           }
-          SecurityRequestDto requestDto;
+          JsonNode requestBody;
           try {
-            requestDto = mapper.readValue(bodyString, SecurityRequestDto.class);
+            requestBody = mapper.readTree(bodyString);
           } catch (Exception e) {
             log.error("Invalid JSON body", e);
             return onError(exchange, HttpStatus.BAD_REQUEST);
           }
 
-          if (!"APP".equalsIgnoreCase(requestDto.getChannel())) {
+          if (!"APP".equalsIgnoreCase(requestBody.path("channel").asText())) {
             return forward(exchange, request, cachedFlux, user, encodedUser, permissions, context, chain);
+          }
+
+          SecurityRequestDto requestDto;
+          try {
+            requestDto = mapper.treeToValue(requestBody, SecurityRequestDto.class);
+          } catch (Exception e) {
+            log.error("Invalid APP request body", e);
+            return onError(exchange, HttpStatus.BAD_REQUEST);
           }
 
           String deviceId = extractDeviceId(requestDto.getData());

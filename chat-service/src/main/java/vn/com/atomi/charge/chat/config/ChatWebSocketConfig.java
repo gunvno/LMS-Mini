@@ -25,7 +25,7 @@ public class ChatWebSocketConfig implements WebSocketMessageBrokerConfigurer {
     private final WebSocketConversationInterceptor conversationInterceptor;
     private final ObjectMapper objectMapper;
 
-    @Value("${config.websocket.allowed-origins:http://localhost:3001}")
+    @Value("${config.websocket.allowed-origins:http://localhost:3000,http://localhost:3001}")
     private String allowedOrigins;
 
     @Override
