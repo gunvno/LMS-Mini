@@ -16,6 +16,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import vn.com.atomi.charge.authn.client.AuthorClient;
+import vn.com.atomi.charge.authn.model.dto.AuthenticationResult;
 import vn.com.atomi.charge.authn.model.entity.AuthnUserEntity;
 import vn.com.atomi.charge.authn.model.entity.RefreshTokenEntity;
 import vn.com.atomi.charge.authn.model.enums.AuthnUserStatus;
@@ -26,9 +27,7 @@ import vn.com.atomi.charge.authn.model.request.AuthenticationRequest;
 import vn.com.atomi.charge.authn.model.request.ChangePasswordRequest;
 import vn.com.atomi.charge.authn.model.request.ForgotPasswordResetRequest;
 import vn.com.atomi.charge.authn.model.request.IntrospectRequest;
-import vn.com.atomi.charge.authn.model.request.LogoutRequest;
 import vn.com.atomi.charge.authn.model.request.OtpVerifyRequest;
-import vn.com.atomi.charge.authn.model.request.RefreshRequest;
 import vn.com.atomi.charge.authn.model.request.RegistrationRequest;
 import vn.com.atomi.charge.authn.model.response.AuthenticationResponse;
 import vn.com.atomi.charge.authn.model.response.IntrospectResponse;
@@ -87,7 +86,7 @@ public class AuthnServiceImpl implements AuthnService {
 	}
 
 	@Override
-	public AuthenticationResponse authenticate(AuthenticationRequest request) {
+	public AuthenticationResult authenticate(AuthenticationRequest request) {
 		AuthnUserEntity user = userRepository.findByUsernameOrEmail(request.getUsername(), request.getUsername())
 				.orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED.getErrorCode()));
 
@@ -111,9 +110,9 @@ public class AuthnServiceImpl implements AuthnService {
 	}
 
 	@Override
-	public AuthenticationResponse refreshToken(RefreshRequest request) {
+	public AuthenticationResult refreshToken(String refreshToken) {
 		try {
-			SignedJWT jwt = verifyToken(request.getToken());
+			SignedJWT jwt = verifyToken(refreshToken);
 			invalidateToken(jwt);
 
 			String userId = jwt.getJWTClaimsSet().getSubject();
@@ -131,12 +130,19 @@ public class AuthnServiceImpl implements AuthnService {
 	}
 
 	@Override
-	public void logout(LogoutRequest request) {
-		try {
-			SignedJWT jwt = verifyToken(request.getToken());
-			invalidateToken(jwt);
-		} catch (Exception exception) {
-			throw new BusinessException("UNAUTHENTICATED", "UNAUTHENTICATED");
+	public void logout(String... tokens) {
+		if (tokens == null) {
+			return;
+		}
+		for (String token : tokens) {
+			if (token == null || token.isBlank()) {
+				continue;
+			}
+			try {
+				invalidateToken(verifyToken(token));
+			} catch (Exception exception) {
+				log.debug("Ignoring an already invalid session token during logout");
+			}
 		}
 	}
 
@@ -324,17 +330,19 @@ public class AuthnServiceImpl implements AuthnService {
 		}
 	}
 
-	private AuthenticationResponse buildAuthResponse(AuthnUserEntity user) {
+	private AuthenticationResult buildAuthResponse(AuthnUserEntity user) {
 		try {
-			return AuthenticationResponse.builder()
-					.token(generateToken(user, validDuration))
-					.refreshToken(generateToken(user, refreshableDuration))
+			AuthenticationResponse response = AuthenticationResponse.builder()
+					.id(user.getId())
 					.userName(user.getUsername())
 					.email(user.getEmail())
 					.firstName(extractFirstName(user.getFullName()))
 					.lastName(extractLastName(user.getFullName()))
-					.permissions(new String[0])
 					.build();
+			return new AuthenticationResult(
+					generateToken(user, validDuration),
+					generateToken(user, refreshableDuration),
+					response);
 		} catch (JOSEException exception) {
 			throw new BusinessException("INVALID_KEY", "INVALID_KEY");
 		}

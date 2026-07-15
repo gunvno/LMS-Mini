@@ -42,20 +42,17 @@ public class SecurityConfig {
             "/auth/register",
             "/auth/token",
             "/auth/login",
-            "/auth/introspect",
             "/auth/refresh",
             "/auth/logout",
             "/auth/otp-register",
             "/auth/otp-verify",
             "/auth/forgot-password/**",
-            "/api/v1/auth/**",
             "/api/v1/auth/register",
             "/api/v1/auth/login",
-            "/api/v1/auth/introspect",
             "/api/v1/auth/refresh-token",
-            "/api/v1/auth/logout",
             "/api/v1/auth/otp-register",
             "/api/v1/auth/otp-verify",
+            "/api/v1/auth/forgot-password/**",
             "/authn/api/v1/auth/register",
             "/authn/api/v1/auth/login",
             "/authn/api/v1/auth/refresh-token",
@@ -97,7 +94,7 @@ public class SecurityConfig {
                 .toList());
         config.setAllowedMethods(List.of("*"));
         config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(false);
+        config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

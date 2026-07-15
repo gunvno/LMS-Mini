@@ -70,6 +70,12 @@ jwt:
   valid-duration: 86400
   refreshable-duration: 604800
 
+auth:
+  cookie:
+    secure: ${AUTH_COOKIE_SECURE:false}
+    same-site: ${AUTH_COOKIE_SAME_SITE:Lax}
+    domain: ${AUTH_COOKIE_DOMAIN:}
+
 config:
   service-name: lms-authn-service
   api:
@@ -92,11 +98,6 @@ config:
         logout: ${config.api.prefix.public}/${config.api.version}/auth/logout
         change-password: ${config.api.prefix.public}/${config.api.version}/auth/change-password
         me: ${config.api.prefix.public}/${config.api.version}/auth/me
-    internal:
-      verify:
-        validate-token: ${config.api.prefix.internal}/${config.api.version}/verify/validate-token
-        user-info: ${config.api.prefix.internal}/${config.api.version}/verify/user-info
-        signature: ${config.api.prefix.internal}/${config.api.version}/verify/signature
   mail:
     host: smtp.gmail.com
     port: 587

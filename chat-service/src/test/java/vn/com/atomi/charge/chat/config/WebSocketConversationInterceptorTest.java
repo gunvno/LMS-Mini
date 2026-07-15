@@ -70,6 +70,18 @@ class WebSocketConversationInterceptorTest {
     }
 
     @Test
+    void supportConnectReusesHttpHandshakePrincipal() {
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.CONNECT);
+        accessor.setUser(new UsernamePasswordAuthenticationToken("user-cookie", null, List.of()));
+
+        Message<?> result = interceptor.preSend(message(accessor), mock(org.springframework.messaging.MessageChannel.class));
+
+        assertThat(StompHeaderAccessor.wrap(result).getUser())
+                .extracting(java.security.Principal::getName)
+                .isEqualTo("user-cookie");
+    }
+
+    @Test
     void stompSendIsRejected() {
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SEND);
         accessor.setDestination("/app/chat");

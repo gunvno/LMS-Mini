@@ -21,6 +21,7 @@ import org.springframework.web.filter.CorsFilter;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @Import(AuthHeaderFilter.class)
@@ -36,6 +37,9 @@ public class SecurityConfig {
 
     @Value("${spring.security.auth.bcrypt.strength:12}")
     private int passwordStrength;
+
+    @Value("${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}")
+    private String corsAllowedOrigins;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -61,10 +65,13 @@ public class SecurityConfig {
     @Bean
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("*")); // Allowed domains
+        config.setAllowedOrigins(Arrays.stream(corsAllowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .toList());
         config.setAllowedMethods(List.of("*"));
         config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(false);
+        config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

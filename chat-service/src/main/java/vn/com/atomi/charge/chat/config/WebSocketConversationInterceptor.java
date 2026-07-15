@@ -62,6 +62,13 @@ public class WebSocketConversationInterceptor implements ChannelInterceptor {
                     List.of(new SimpleGrantedAuthority(AI_CHAT_AUTHORITY))));
             return;
         }
+        if (accessor.getUser() != null && accessor.getUser().getName() != null) {
+            accessor.setUser(new UsernamePasswordAuthenticationToken(
+                    accessor.getUser().getName(),
+                    null,
+                    List.of(new SimpleGrantedAuthority(SUPPORT_CHAT_AUTHORITY))));
+            return;
+        }
         String userId = authenticatedUserService.requireUserId(
                 accessor.getFirstNativeHeader("Authorization"));
         accessor.setUser(new UsernamePasswordAuthenticationToken(

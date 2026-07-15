@@ -177,20 +177,19 @@ public class PaymentServiceImpl implements PaymentService {
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, "payment.not_found");
         }
         PaymentEntity payment = paymentRepository
-                .findFirstByUserIdAndProviderOrderCodeAndDeletedAtIsNull(userId, orderCode)
+                .findForUpdateByUserIdAndOrderCode(userId, orderCode)
                 .orElse(null);
         if (payment == null) {
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, "payment.not_found");
         }
         payment = expireIfNeeded(payment);
         if (payment.getStatus() != PaymentStatus.PAID) {
-            try {
-                PayosPaymentLinkResponse providerPayment = payosClient.getPaymentLink(orderCode);
-                if (providerPayment != null && "PAID".equalsIgnoreCase(providerPayment.getStatus())) {
-                    payment = markPaid(payment, "return-sync");
-                }
-            } catch (IllegalStateException exception) {
-                return BaseResponse.fail(HttpStatus.BAD_REQUEST, exception.getMessage());
+            PayosPaymentLinkResponse providerPayment = payosClient.getPaymentLink(orderCode);
+            if (isProviderPaid(providerPayment)) {
+                payment = markPaid(payment, "return-sync");
+            } else if (isProviderCancelled(providerPayment)
+                    && payment.getStatus() == PaymentStatus.PENDING) {
+                payment = markCancelled(payment, "provider-sync-cancelled");
             }
         }
         if (payment.getStatus() == PaymentStatus.PAID && !provisionPaidCourse(payment)) {
@@ -223,11 +222,30 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         if (PROVIDER_PAYOS.equalsIgnoreCase(payment.getProvider())) {
-            payosClient.cancelPaymentLink(orderCode, "User requested cancellation");
+            PayosPaymentLinkResponse providerPayment = payosClient.getPaymentLink(orderCode);
+            if (isProviderPaid(providerPayment)) {
+                PaymentEntity paid = markPaid(payment, "cancel-precheck-paid");
+                provisionPaidCourse(paid);
+                return BaseResponse.fail(HttpStatus.CONFLICT, "payment.already_paid");
+            }
+            if (isProviderCancelled(providerPayment)) {
+                PaymentEntity cancelled = markCancelled(payment, "provider-already-cancelled");
+                return BaseResponse.success(HttpStatus.OK, paymentMapper.toResponse(cancelled));
+            }
+
+            PayosPaymentLinkResponse cancelResult =
+                    payosClient.cancelPaymentLink(orderCode, "User requested cancellation");
+            if (isProviderPaid(cancelResult)) {
+                PaymentEntity paid = markPaid(payment, "cancel-race-paid");
+                provisionPaidCourse(paid);
+                return BaseResponse.fail(HttpStatus.CONFLICT, "payment.already_paid");
+            }
+            if (!isProviderCancelled(cancelResult)) {
+                return BaseResponse.fail(HttpStatus.CONFLICT, "payment.cancel_not_confirmed");
+            }
         }
-        payment.setStatus(PaymentStatus.CANCELLED);
-        payment.setRawWebhook("cancelled-by-user");
-        return BaseResponse.success(HttpStatus.OK, paymentMapper.toResponse(paymentRepository.save(payment)));
+        PaymentEntity cancelled = markCancelled(payment, "cancelled-by-user");
+        return BaseResponse.success(HttpStatus.OK, paymentMapper.toResponse(cancelled));
     }
 
     @Override
@@ -242,14 +260,13 @@ public class PaymentServiceImpl implements PaymentService {
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, "payos.invalid_order_code");
         }
 
-        PaymentEntity payment = paymentRepository.findFirstByProviderOrderCodeAndDeletedAtIsNull(orderCode)
+        PaymentEntity payment = paymentRepository.findForUpdateByOrderCode(orderCode)
                 .orElse(null);
         if (payment == null) {
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, "payment.not_found");
         }
-        payment = expireIfNeeded(payment);
-        if (payment.getStatus() == PaymentStatus.EXPIRED) {
-            // Return 200 to PayOS so a late webhook is not retried indefinitely.
+        if (!Boolean.TRUE.equals(request.getSuccess()) || !"00".equals(request.getCode())) {
+            // A signed but unsuccessful event must never be interpreted as money received.
             return BaseResponse.success(HttpStatus.OK, paymentMapper.toResponse(payment));
         }
         if (payment.getStatus() == PaymentStatus.PAID) {
@@ -284,6 +301,20 @@ public class PaymentServiceImpl implements PaymentService {
             payment.setRawWebhook(source);
         }
         return paymentRepository.save(payment);
+    }
+
+    private PaymentEntity markCancelled(PaymentEntity payment, String source) {
+        payment.setStatus(PaymentStatus.CANCELLED);
+        payment.setRawWebhook(source);
+        return paymentRepository.save(payment);
+    }
+
+    private boolean isProviderPaid(PayosPaymentLinkResponse payment) {
+        return payment != null && "PAID".equalsIgnoreCase(payment.getStatus());
+    }
+
+    private boolean isProviderCancelled(PayosPaymentLinkResponse payment) {
+        return payment != null && "CANCELLED".equalsIgnoreCase(payment.getStatus());
     }
 
     private PaymentEntity expireIfNeeded(PaymentEntity payment) {

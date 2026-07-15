@@ -31,8 +31,9 @@ config:
 spring:
   application:
     name: ${config.service-name}
-  codec:
-    max-in-memory-size: 10MB
+  http:
+    codecs:
+      max-in-memory-size: 10MB
   lifecycle:
     timeout-per-shutdown-phase: 30s
   cloud:

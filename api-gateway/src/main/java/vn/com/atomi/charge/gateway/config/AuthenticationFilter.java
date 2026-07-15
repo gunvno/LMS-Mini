@@ -1,20 +1,14 @@
 package vn.com.atomi.charge.gateway.config;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferUtils;
-import org.springframework.http.*;
+import org.springframework.http.HttpCookie;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
-import org.springframework.http.server.reactive.ServerHttpRequestDecorator;
 import org.springframework.http.server.reactive.ServerHttpResponse;
-import org.springframework.lang.Nullable;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
@@ -25,68 +19,52 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import vn.com.atomi.charge.gateway.dto.AuthnUserInfoDto;
 import vn.com.atomi.charge.gateway.dto.BaseResponseDto;
 import vn.com.atomi.charge.gateway.dto.IntrospectRequestDto;
 import vn.com.atomi.charge.gateway.dto.IntrospectResponseDto;
-import vn.com.atomi.charge.gateway.dto.SecurityRequestDto;
 import vn.com.atomi.charge.gateway.dto.UserDto;
 import vn.com.atomi.charge.gateway.service.rest.AuthorClient;
-import vn.com.atomi.charge.gateway.dto.VerifySignRequestDto;
 import vn.com.atomi.charge.gateway.service.rest.AuthnClient;
 import vn.com.atomi.charge.gateway.util.JsonUtil;
 
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.List;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class AuthenticationFilter implements WebFilter {
 
-  @Autowired
-  AuthnClient authnClient;
-
-  @Autowired
-  AuthorClient authorClient;
-
-  @Value("${spring.profiles.active:default}")
-  private String profile;
+  private final AuthnClient authnClient;
+  private final AuthorClient authorClient;
 
   @Value("${internal.service-key:}")
   private String internalServiceKey;
 
-  ObjectMapper mapper = new ObjectMapper();
-
-  private static final byte[] EMPTY_BODY = new byte[0];
+  private static final String ACCESS_TOKEN_COOKIE = "lms_access_token";
 
   @Override
   @NonNull
   public Mono<Void> filter(ServerWebExchange exchange, @NonNull WebFilterChain chain) {
     String path = exchange.getRequest().getURI().getPath();
 
-    if (path.equals("/auth/token")
-            || path.startsWith("/auth/")
-            || path.startsWith("/api/v1/auth/")
-            || path.startsWith("/authn/api/v1/auth/")
+    if (isPublicAuthPath(path)
             || path.startsWith("/actuator/")
             || path.startsWith("/swagger-ui")
             || path.startsWith("/v3/api-docs")) {
       return chain.filter(exchange);
     }
     ServerHttpRequest request = exchange.getRequest();
-    if (!isAuthHeader(request)) {
+    String token = resolveAccessToken(request);
+    if (!StringUtils.hasText(token)) {
       return chain.filter(exchange);
     }
 
-    String authHeader = getAuthHeader(request);
-    if (!StringUtils.hasText(authHeader) || !authHeader.startsWith("Bearer ")) {
-      return chain.filter(exchange);
-    }
-
-    String token = authHeader.substring(7);
     return Mono.fromCallable(() -> resolveAuthenticatedUser(token))
         .subscribeOn(Schedulers.boundedElastic())
         .flatMap(resolved -> resolved.authenticated()
@@ -97,74 +75,13 @@ public class AuthenticationFilter implements WebFilter {
   private Mono<Void> filterAuthenticated(ServerWebExchange exchange,
                                          WebFilterChain chain,
                                          AuthenticatedRequest resolved) {
-    ServerHttpRequest request = exchange.getRequest();
-    UserDto user = resolved.user();
-    List<String> permissions = resolved.permissions();
-    SecurityContext context = resolved.context();
-    String encodedUser = resolved.encodedUser();
-
-    // POST → need read body
-    if (request.getMethod() == HttpMethod.POST && isTextContent(request.getHeaders().getContentType())) {
-      return DataBufferUtils.join(request.getBody()).flatMap(buffer -> {
-        byte[] bodyBytes = new byte[buffer.readableByteCount()];
-        buffer.read(bodyBytes);
-        DataBufferUtils.release(buffer);
-        MediaType contentType = request.getHeaders().getContentType();
-        Flux<DataBuffer> cachedFlux = Flux.defer(() -> {
-          DataBuffer cacheBuffer = exchange.getResponse().bufferFactory().wrap(bodyBytes);
-          return Mono.just(cacheBuffer);
-        });
-
-        if (isTextContent(contentType)) {
-          String bodyString = new String(bodyBytes, StandardCharsets.UTF_8);
-          if (!StringUtils.hasText(bodyString)) {
-            return forward(exchange, request, null, user, encodedUser, permissions, context, chain);
-          }
-          JsonNode requestBody;
-          try {
-            requestBody = mapper.readTree(bodyString);
-          } catch (Exception e) {
-            log.error("Invalid JSON body", e);
-            return onError(exchange, HttpStatus.BAD_REQUEST);
-          }
-
-          if (!"APP".equalsIgnoreCase(requestBody.path("channel").asText())) {
-            return forward(exchange, request, cachedFlux, user, encodedUser, permissions, context, chain);
-          }
-
-          SecurityRequestDto requestDto;
-          try {
-            requestDto = mapper.treeToValue(requestBody, SecurityRequestDto.class);
-          } catch (Exception e) {
-            log.error("Invalid APP request body", e);
-            return onError(exchange, HttpStatus.BAD_REQUEST);
-          }
-
-          String deviceId = extractDeviceId(requestDto.getData());
-          Gson gson = new GsonBuilder()
-            .serializeNulls()
-            .create();
-          String dataJson = gson.toJson(requestDto.getData());
-
-          VerifySignRequestDto signDto = new VerifySignRequestDto();
-          signDto.setDeviceId(deviceId);
-          signDto.setSignature(requestDto.getSignature());
-          signDto.setData(dataJson);
-
-          if (!isValidSign(signDto)) {
-            log.error("Invalid signature for {}", exchange.getRequest().getURI());
-            return onError(exchange, HttpStatus.BAD_REQUEST);
-          }
-        }
-
-        return forward(exchange, request, cachedFlux, user, encodedUser, permissions, context, chain);
-      }).switchIfEmpty(
-          forward(exchange, user, encodedUser, permissions, context, chain)
-      );
-    }
-
-    // NON-POST
-    return forward(exchange, user, encodedUser, permissions, context, chain);
+    return forward(
+        exchange,
+        resolved.user(),
+        resolved.encodedUser(),
+        resolved.permissions(),
+        resolved.context(),
+        chain);
   }
 
   private AuthenticatedRequest resolveAuthenticatedUser(String token) {
@@ -202,37 +119,10 @@ public class AuthenticationFilter implements WebFilter {
     }
   }
 
-  private boolean isTextContent(MediaType contentType) {
-    if (contentType == null) return false;
-
-    return MediaType.APPLICATION_JSON.includes(contentType)
-        || MediaType.APPLICATION_XML.includes(contentType)
-        || MediaType.APPLICATION_FORM_URLENCODED.includes(contentType)
-        || contentType.getType().equalsIgnoreCase("text");
-  }
-
-  private String extractDeviceId(Object data) {
-    if (data instanceof Map<?, ?> map) {
-      Object v = map.get("deviceId");
-      return v != null ? v.toString() : "";
-    }
-    return "";
-  }
-
-  // POST (has body)
-  private Mono<Void> forward(ServerWebExchange exchange, ServerHttpRequest baseRequest,
-                             @Nullable Flux<DataBuffer> body,
-                             UserDto user, String encodedUser, List<String> permissions,
-                             SecurityContext context, WebFilterChain chain) {
-
-    ServerHttpRequest request = (body == null) ? baseRequest : new ServerHttpRequestDecorator(baseRequest) {
-      @Override
-      public Flux<DataBuffer> getBody() {
-        return body;
-      }
-    };
-
-    ServerHttpRequest newRequest = request.mutate()
+  private Mono<Void> forward(ServerWebExchange exchange, UserDto user, String encodedUser,
+                             List<String> permissions, SecurityContext context,
+                             WebFilterChain chain) {
+    ServerHttpRequest newRequest = exchange.getRequest().mutate()
         .headers(headers -> {
           headers.set("X-User-Info", encodedUser);
           headers.set("X-User", user.getId());
@@ -254,42 +144,44 @@ public class AuthenticationFilter implements WebFilter {
         );
   }
 
-  // NON-POST
-  private Mono<Void> forward(ServerWebExchange exchange, UserDto user, String encodedUser,
-                             List<String> permissions, SecurityContext context, WebFilterChain chain) {
-    return forward(exchange, exchange.getRequest(), null, user, encodedUser, permissions, context, chain);
-  }
-
   private Mono<Void> onError(ServerWebExchange exchange) {
     ServerHttpResponse response = exchange.getResponse();
     response.setStatusCode(HttpStatus.UNAUTHORIZED);
     return response.setComplete();
   }
 
-  private Mono<Void> onError(ServerWebExchange exchange, HttpStatus status) {
-    ServerHttpResponse response = exchange.getResponse();
-    if (response.isCommitted()) {
-      log.warn("Response already committed, cannot write error");
-      return Mono.empty();
+  private String resolveAccessToken(ServerHttpRequest request) {
+    String authorization = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+    if (StringUtils.hasText(authorization) && authorization.startsWith("Bearer ")) {
+      return authorization.substring(7);
     }
-    response.setStatusCode(status);
-    response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
-    String body = String.format("{\"code\":\"%s\"}", status.name());
-    DataBuffer buffer = response.bufferFactory()
-        .wrap(body.getBytes(StandardCharsets.UTF_8));
-    return response.writeWith(Mono.just(buffer));
+    HttpCookie cookie = request.getCookies().getFirst(ACCESS_TOKEN_COOKIE);
+    return cookie == null ? null : cookie.getValue();
   }
 
-  private boolean isValidSign(VerifySignRequestDto data) {
-    return true;
-  }
-
-  private String getAuthHeader(ServerHttpRequest request) {
-    return request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-  }
-
-  private boolean isAuthHeader(ServerHttpRequest request) {
-    return request.getHeaders().containsKey(HttpHeaders.AUTHORIZATION);
+  private boolean isPublicAuthPath(String path) {
+    return path.equals("/auth/token")
+        || path.equals("/auth/login")
+        || path.equals("/auth/refresh")
+        || path.equals("/auth/logout")
+        || path.equals("/auth/register")
+        || path.equals("/auth/otp-register")
+        || path.equals("/auth/otp-verify")
+        || path.startsWith("/auth/forgot-password/")
+        || path.equals("/api/v1/auth/login")
+        || path.equals("/api/v1/auth/refresh-token")
+        || path.equals("/api/v1/auth/logout")
+        || path.equals("/api/v1/auth/register")
+        || path.equals("/api/v1/auth/otp-register")
+        || path.equals("/api/v1/auth/otp-verify")
+        || path.startsWith("/api/v1/auth/forgot-password/")
+        || path.equals("/authn/api/v1/auth/login")
+        || path.equals("/authn/api/v1/auth/refresh-token")
+        || path.equals("/authn/api/v1/auth/logout")
+        || path.equals("/authn/api/v1/auth/register")
+        || path.equals("/authn/api/v1/auth/otp-register")
+        || path.equals("/authn/api/v1/auth/otp-verify")
+        || path.startsWith("/authn/api/v1/auth/forgot-password/");
   }
 
   private boolean isTokenValid(String token) {

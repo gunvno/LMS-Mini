@@ -31,6 +31,15 @@ public interface PaymentRepository extends BaseRepository<PaymentEntity, String>
             @Param("orderCode") Long orderCode
     );
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select payment
+              from PaymentEntity payment
+             where payment.providerOrderCode = :orderCode
+               and payment.deletedAt is null
+            """)
+    Optional<PaymentEntity> findForUpdateByOrderCode(@Param("orderCode") Long orderCode);
+
     Optional<PaymentEntity> findFirstByUserIdAndInvoiceCodeAndDeletedAtIsNull(String userId, String invoiceCode);
     Optional<PaymentEntity> findFirstByUserIdAndCourseIdAndStatusAndDeletedAtIsNullOrderByCreatedDateDesc(
             String userId,
