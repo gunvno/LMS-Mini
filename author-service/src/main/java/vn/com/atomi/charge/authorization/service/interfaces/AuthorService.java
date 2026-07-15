@@ -2,6 +2,7 @@ package vn.com.atomi.charge.authorization.service.interfaces;
 
 import org.springframework.data.domain.Pageable;
 import vn.com.atomi.charge.authorization.model.dto.PermissionDto;
+import vn.com.atomi.charge.authorization.model.dto.NoticeRecipientOptionDto;
 import vn.com.atomi.charge.authorization.model.dto.RoleDto;
 import vn.com.atomi.charge.authorization.model.dto.StaffActivityDto;
 import vn.com.atomi.charge.authorization.model.dto.StaffAccountDto;
@@ -54,4 +55,6 @@ public interface AuthorService {
 	BaseResponse<List<String>> getMyPermissions();
 
 	BaseResponse<List<String>> getUsersByRole(String roleCode);
+
+	BaseResponse<List<NoticeRecipientOptionDto>> getNoticeRecipientOptions();
 }

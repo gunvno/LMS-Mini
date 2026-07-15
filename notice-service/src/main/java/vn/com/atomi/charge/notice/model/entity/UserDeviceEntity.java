@@ -11,7 +11,6 @@ import vn.com.atomi.charge.base.model.entity.BaseEntity;
 import vn.com.atomi.charge.notice.model.enums.DeviceType;
 import vn.com.atomi.charge.notice.model.enums.UserDeviceStatus;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
@@ -30,8 +29,9 @@ public class UserDeviceEntity extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private DeviceType deviceType;
 
+    // Keep the legacy physical column so existing databases need no migration.
     @Column(name = "fcm_token", nullable = false, columnDefinition = "TEXT")
-    private String fcmToken;
+    private String installationId;
 
     @Column(name = "app_version")
     private String appVersion;

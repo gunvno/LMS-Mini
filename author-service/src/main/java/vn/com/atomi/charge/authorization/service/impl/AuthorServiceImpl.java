@@ -9,6 +9,7 @@ import org.springframework.util.StringUtils;
 import vn.com.atomi.charge.authorization.client.AuthnClient;
 import vn.com.atomi.charge.authorization.model.dto.AuthnUserDto;
 import vn.com.atomi.charge.authorization.model.dto.PermissionDto;
+import vn.com.atomi.charge.authorization.model.dto.NoticeRecipientOptionDto;
 import vn.com.atomi.charge.authorization.model.dto.RoleDto;
 import vn.com.atomi.charge.authorization.model.dto.StaffActivityDto;
 import vn.com.atomi.charge.authorization.model.dto.StaffAccountDto;
@@ -32,8 +33,12 @@ import vn.com.atomi.charge.base.model.request.BaseRequest;
 import vn.com.atomi.charge.base.model.response.BaseResponse;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class AuthorServiceImpl implements AuthorService {
@@ -332,6 +337,41 @@ public class AuthorServiceImpl implements AuthorService {
 		return BaseResponse.success(HttpStatus.OK, users);
 	}
 
+	@Override
+	public BaseResponse<List<NoticeRecipientOptionDto>> getNoticeRecipientOptions() {
+		List<UserRoleEntity> mappings = userRoleRepository.findByDeletedAtIsNull();
+		if (mappings.isEmpty()) {
+			return BaseResponse.success(HttpStatus.OK, List.of());
+		}
+
+		Map<String, String> roleCodesById = roleRepository.getAll().stream()
+				.collect(Collectors.toMap(RoleEntity::getId, role -> role.getCode().name()));
+		Map<String, List<String>> rolesByUser = mappings.stream()
+				.filter(mapping -> roleCodesById.containsKey(mapping.getRoleId()))
+				.collect(Collectors.groupingBy(
+						UserRoleEntity::getUserId,
+						Collectors.mapping(
+								mapping -> roleCodesById.get(mapping.getRoleId()),
+								Collectors.collectingAndThen(
+										Collectors.toCollection(LinkedHashSet::new),
+										List::copyOf))));
+
+		List<String> userIds = rolesByUser.keySet().stream().toList();
+		BaseResponse<List<AuthnUserDto>> userResponse = authnClient.getUsersByIds(userIds);
+		List<AuthnUserDto> users = userResponse != null && userResponse.getData() != null
+				? userResponse.getData()
+				: List.of();
+
+		List<NoticeRecipientOptionDto> options = users.stream()
+				.filter(user -> user != null && "ACTIVE".equalsIgnoreCase(user.getStatus()))
+				.map(user -> mapNoticeRecipientOption(user, rolesByUser.getOrDefault(user.getId(), List.of())))
+				.sorted(Comparator.comparing(
+						option -> StringUtils.hasText(option.getFullName()) ? option.getFullName() : option.getUsername(),
+						Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
+				.toList();
+		return BaseResponse.success(HttpStatus.OK, options);
+	}
+
 	private RoleEntity findRole(String roleCode) {
 		if (!StringUtils.hasText(roleCode)) {
 			throw new IllegalArgumentException("Role code is required");
@@ -381,6 +421,17 @@ public class AuthorServiceImpl implements AuthorService {
 		staff.setRoleCode(roleCode);
 		staff.setPermissionCodes(getEffectivePermissionCodes(user.getId()));
 		return staff;
+	}
+
+	private NoticeRecipientOptionDto mapNoticeRecipientOption(AuthnUserDto user, List<String> roleCodes) {
+		NoticeRecipientOptionDto option = new NoticeRecipientOptionDto();
+		option.setUserId(user.getId());
+		option.setUsername(user.getUsername());
+		option.setEmail(user.getEmail());
+		option.setFullName(user.getFullName());
+		option.setStatus(user.getStatus());
+		option.setRoleCodes(roleCodes);
+		return option;
 	}
 
 	private StaffActivityDto mapStaffActivity(AuthnUserDto user) {

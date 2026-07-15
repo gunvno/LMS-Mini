@@ -1,3 +1,10 @@
 notice:
   not_found: "Notice not found"
   invalid_status: "Invalid notice status"
+  invalid_request: "Invalid notification request"
+  no_recipient: "No notification recipient was found"
+device:
+  installation_id_required: "Firebase installation ID is required"
+  token_required: "Firebase device identifier is required"
+user:
+  not_found: "User not found"

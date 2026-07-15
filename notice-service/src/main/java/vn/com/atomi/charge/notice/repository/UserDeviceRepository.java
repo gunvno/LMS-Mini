@@ -1,15 +1,26 @@
 package vn.com.atomi.charge.notice.repository;
 
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import vn.com.atomi.charge.base.repository.BaseRepository;
 import vn.com.atomi.charge.notice.model.entity.UserDeviceEntity;
 import vn.com.atomi.charge.notice.model.enums.UserDeviceStatus;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface UserDeviceRepository extends BaseRepository<UserDeviceEntity, String> {
 
-    Optional<UserDeviceEntity> findByUserIdAndFcmTokenAndDeletedAtIsNull(String userId, String fcmToken);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select device
+            from UserDeviceEntity device
+            where device.installationId = :installationId
+              and device.deletedAt is null
+            """)
+    List<UserDeviceEntity> findAllByInstallationIdForUpdate(
+            @Param("installationId") String installationId);
 
     List<UserDeviceEntity> findByUserIdAndStatusAndDeletedAtIsNull(String userId, UserDeviceStatus status);
 

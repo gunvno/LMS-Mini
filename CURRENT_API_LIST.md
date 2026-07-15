@@ -69,6 +69,7 @@ Gateway prefix raw: `/author`. Alias admin: `/admin/permissions`.
 | POST | `/author/api/v1/user-roles` | `/api/v1/user-roles` | Gán role cho user bằng body |
 | POST | `/author/api/v1/users/{userId}/roles` | `/api/v1/users/{userId}/roles` | Gán role cho user theo path userId |
 | GET | `/author/api/v1/users/{userId}/roles` | `/api/v1/users/{userId}/roles` | Lấy role của một user |
+| GET | `/author/api/v1/users/notice-recipients` | `/api/v1/users/notice-recipients` | Danh sách người nhận thông báo đang hoạt động; giao diện hiển thị tên, `userId` chỉ dùng làm key nội bộ |
 | GET | `/author/api/v1/users/me/roles` | `/api/v1/users/me/roles` | Lấy role của user hiện tại từ token |
 | GET | `/author/api/v1/users/me/permissions` | `/api/v1/users/me/permissions` | Lấy permission của user hiện tại từ token |
 | GET | `/staff-activity/me` | `/staff-activity/me` | Xem hoạt động staff của user hiện tại |
@@ -255,8 +256,8 @@ Gateway prefix: `/notice`.
 
 | Method | Gateway API | Raw service API | Chức năng |
 |---|---|---|---|
-| POST | `/notice/api/v1/devices/register` | `/api/v1/devices/register` | User hiện tại đăng ký/lưu FCM token thiết bị |
-| POST | `/notice/api/v1/devices/deactivate` | `/api/v1/devices/deactivate` | User hiện tại tắt FCM token thiết bị |
+| POST | `/notice/api/v1/devices/register` | `/api/v1/devices/register` | User hiện tại đăng ký Firebase Installation ID (`installationId`; vẫn nhận alias cũ `token`) |
+| POST | `/notice/api/v1/devices/deactivate` | `/api/v1/devices/deactivate` | User hiện tại tắt Firebase Installation ID của thiết bị |
 
 ## Notice Service - User Notice
 

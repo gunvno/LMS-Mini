@@ -120,7 +120,8 @@ public class DataInitializer implements ApplicationRunner {
             "NOTICE_SEND",
             "STAFF_ACTIVITY_VIEW",
             "USER_PROFILE_VIEW",
-            "USER_PASSWORD_CHANGE"
+            "USER_PASSWORD_CHANGE",
+            "DEVICE_MANAGE"
     );
 
     private static final List<String> STUDENT_PERMISSIONS = List.of(

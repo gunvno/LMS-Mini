@@ -17,4 +17,6 @@ public interface DeviceService {
     List<UserDeviceEntity> getActiveDevices(String userId);
 
     List<UserDeviceEntity> getAllActiveDevices();
+
+    void markInstallationInvalid(String installationId);
 }

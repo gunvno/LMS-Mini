@@ -20,7 +20,7 @@
         <spring-cloud.version>2025.0.0</spring-cloud.version>
         <base-service.version>1.0</base-service.version>
         <mapstruct.version>1.6.3</mapstruct.version>
-        <firebase-admin.version>9.4.3</firebase-admin.version>
+        <firebase-admin.version>9.10.0</firebase-admin.version>
     </properties>
 
     <dependencyManagement>

@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import vn.com.atomi.charge.base.model.request.BaseRequest;
 import vn.com.atomi.charge.base.model.response.BaseResponse;
@@ -25,6 +26,7 @@ public class DeviceServiceImpl implements DeviceService {
     private final UserDeviceRepository repository;
 
     @Override
+    @Transactional
     public BaseResponse<Void> registerDevice(BaseRequest<DeviceRegisterRequest> request) {
         String userId = currentUserId();
         if (!StringUtils.hasText(userId)) {
@@ -32,28 +34,44 @@ public class DeviceServiceImpl implements DeviceService {
         }
 
         DeviceRegisterRequest data = request == null ? null : request.getData();
-        if (data == null || !StringUtils.hasText(data.getToken())) {
-            return BaseResponse.fail(HttpStatus.BAD_REQUEST, "device.token_required");
+        String installationId = data == null ? null : data.resolveInstallationId();
+        if (!StringUtils.hasText(installationId)) {
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, "device.installation_id_required");
         }
 
-        UserDeviceEntity entity = repository
-                .findByUserIdAndFcmTokenAndDeletedAtIsNull(userId, data.getToken())
-                .orElseGet(UserDeviceEntity::new);
+        List<UserDeviceEntity> registrations = repository.findAllByInstallationIdForUpdate(installationId);
+        UserDeviceEntity owner = registrations.stream()
+                .filter(device -> userId.equals(device.getUserId()))
+                .findFirst()
+                .orElseGet(() -> registrations.stream().findFirst().orElseGet(UserDeviceEntity::new));
+        LocalDateTime now = LocalDateTime.now();
 
-        entity.setUserId(userId);
-        entity.setFcmToken(data.getToken());
-        entity.setDeviceType(data.getDeviceType());
-        entity.setDeviceId(data.getDeviceId());
-        entity.setAppVersion(data.getAppVersion());
-        entity.setStatus(UserDeviceStatus.ACTIVE);
-        entity.setLastActiveAt(LocalDateTime.now());
+        registrations.stream()
+                .filter(device -> device != owner)
+                .forEach(device -> {
+                    device.setStatus(UserDeviceStatus.INACTIVE);
+                    device.setLastActiveAt(now);
+                });
 
-        repository.save(entity);
+        owner.setUserId(userId);
+        owner.setInstallationId(installationId);
+        owner.setDeviceType(data.getDeviceType());
+        owner.setDeviceId(data.getDeviceId());
+        owner.setAppVersion(data.getAppVersion());
+        owner.setStatus(UserDeviceStatus.ACTIVE);
+        owner.setLastActiveAt(now);
+
+        if (registrations.isEmpty()) {
+            repository.save(owner);
+        } else {
+            repository.saveAll(registrations);
+        }
 
         return BaseResponse.success(HttpStatus.OK, null);
     }
 
     @Override
+    @Transactional
     public BaseResponse<Void> deactivateDevice(BaseRequest<DeviceDeactivateRequest> request) {
         String userId = currentUserId();
         if (!StringUtils.hasText(userId)) {
@@ -61,16 +79,23 @@ public class DeviceServiceImpl implements DeviceService {
         }
 
         DeviceDeactivateRequest data = request == null ? null : request.getData();
-        if (data == null || !StringUtils.hasText(data.getToken())) {
-            return BaseResponse.fail(HttpStatus.BAD_REQUEST, "device.token_required");
+        String installationId = data == null ? null : data.resolveInstallationId();
+        if (!StringUtils.hasText(installationId)) {
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, "device.installation_id_required");
         }
 
-        repository.findByUserIdAndFcmTokenAndDeletedAtIsNull(userId, data.getToken())
-                .ifPresent(device -> {
+        LocalDateTime now = LocalDateTime.now();
+        List<UserDeviceEntity> ownedRegistrations = repository
+                .findAllByInstallationIdForUpdate(installationId)
+                .stream()
+                .filter(device -> userId.equals(device.getUserId()))
+                .toList();
+
+        ownedRegistrations.forEach(device -> {
                     device.setStatus(UserDeviceStatus.INACTIVE);
-                    device.setLastActiveAt(LocalDateTime.now());
-                    repository.save(device);
+                    device.setLastActiveAt(now);
                 });
+        repository.saveAll(ownedRegistrations);
 
         return BaseResponse.success(HttpStatus.OK, null);
     }
@@ -87,6 +112,22 @@ public class DeviceServiceImpl implements DeviceService {
     @Override
     public List<UserDeviceEntity> getAllActiveDevices() {
         return repository.findByStatusAndDeletedAtIsNull(UserDeviceStatus.ACTIVE);
+    }
+
+    @Override
+    @Transactional
+    public void markInstallationInvalid(String installationId) {
+        if (!StringUtils.hasText(installationId)) {
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        List<UserDeviceEntity> registrations = repository.findAllByInstallationIdForUpdate(installationId);
+        registrations.forEach(device -> {
+            device.setStatus(UserDeviceStatus.INVALID);
+            device.setLastActiveAt(now);
+        });
+        repository.saveAll(registrations);
     }
 
     private String currentUserId() {

@@ -1,3 +1,10 @@
 notice:
   not_found: "Không tìm thấy thông báo"
   invalid_status: "Trạng thái thông báo không hợp lệ"
+  invalid_request: "Yêu cầu gửi thông báo không hợp lệ"
+  no_recipient: "Không tìm thấy người nhận thông báo"
+device:
+  installation_id_required: "Thiếu mã cài đặt Firebase của thiết bị"
+  token_required: "Thiếu mã định danh Firebase của thiết bị"
+user:
+  not_found: "Không tìm thấy người dùng"

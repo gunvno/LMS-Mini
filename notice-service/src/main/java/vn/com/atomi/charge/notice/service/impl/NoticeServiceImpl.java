@@ -12,6 +12,7 @@ import org.springframework.util.StringUtils;
 import vn.com.atomi.charge.base.model.response.BaseResponse;
 import vn.com.atomi.charge.base.model.request.BaseRequest;
 import vn.com.atomi.charge.notice.client.AuthorClient;
+import vn.com.atomi.charge.notice.exception.FirebasePushException;
 import vn.com.atomi.charge.notice.model.dto.NoticeDto;
 import vn.com.atomi.charge.notice.model.entity.NoticeDeliveryLogEntity;
 import vn.com.atomi.charge.notice.model.entity.NoticeEntity;
@@ -295,7 +296,7 @@ public class NoticeServiceImpl implements NoticeService {
         for (UserDeviceEntity device : devices) {
             try {
                 String providerMessageId = firebasePushService.send(
-                        device.getFcmToken(),
+                        device.getInstallationId(),
                         notice.getTitle(),
                         notice.getContent(),
                         buildFirebaseData(notice.getId(), notice.getNoticeType(), notice.getData())
@@ -303,6 +304,13 @@ public class NoticeServiceImpl implements NoticeService {
 
                 saveDeliveryLog(notice.getId(), recipient.getId(), recipient.getUserId(), device,
                         NoticeDeliveryLogStatus.SENT, providerMessageId, null, null);
+            } catch (FirebasePushException ex) {
+                allDevicesSuccess = false;
+                if (ex.isInvalidInstallation()) {
+                    deviceService.markInstallationInvalid(device.getInstallationId());
+                }
+                saveDeliveryLog(notice.getId(), recipient.getId(), recipient.getUserId(), device,
+                        NoticeDeliveryLogStatus.FAILED, null, firebaseErrorCode(ex), ex.getMessage());
             } catch (Exception ex) {
                 allDevicesSuccess = false;
                 saveDeliveryLog(notice.getId(), recipient.getId(), recipient.getUserId(), device,
@@ -346,13 +354,19 @@ public class NoticeServiceImpl implements NoticeService {
         log.setRecipientId(recipientId);
         log.setUserId(userId);
         log.setDeviceId(device.getDeviceId());
-        log.setFcmToken(device.getFcmToken());
+        log.setInstallationId(device.getInstallationId());
         log.setProvider(NoticeProvider.FIREBASE);
         log.setProviderMessageId(providerMessageId);
         log.setStatus(status);
         log.setErrorCode(errorCode);
         log.setErrorMessage(errorMessage);
         deliveryLogRepository.save(log);
+    }
+
+    private String firebaseErrorCode(FirebasePushException exception) {
+        return exception.getMessagingErrorCode() == null
+                ? "FIREBASE_SEND_FAILED"
+                : exception.getMessagingErrorCode().name();
     }
 
     private NoticeDto toDto(NoticeRecipientEntity recipient) {

@@ -4,5 +4,5 @@ import java.util.Map;
 
 public interface FirebasePushService {
 
-    String send(String fcmToken, String title, String body, Map<String, String> data);
+    String send(String installationId, String title, String body, Map<String, String> data);
 }

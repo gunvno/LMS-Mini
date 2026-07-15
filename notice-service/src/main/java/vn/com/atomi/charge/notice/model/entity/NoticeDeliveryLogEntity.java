@@ -11,9 +11,6 @@ import vn.com.atomi.charge.base.model.entity.BaseEntity;
 import vn.com.atomi.charge.notice.model.enums.NoticeDeliveryLogStatus;
 import vn.com.atomi.charge.notice.model.enums.NoticeProvider;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-
 @Getter
 @Setter
 @Entity
@@ -32,8 +29,9 @@ public class NoticeDeliveryLogEntity extends BaseEntity {
     @Column(name = "device_id")
     private String deviceId;
 
+    // Keep the legacy physical column so existing delivery logs remain compatible.
     @Column(name = "fcm_token", columnDefinition = "TEXT")
-    private String fcmToken;
+    private String installationId;
 
     @Column(name = "provider", nullable = false)
     @Enumerated(EnumType.STRING)

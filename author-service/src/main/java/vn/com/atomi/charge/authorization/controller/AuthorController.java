@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import vn.com.atomi.charge.authorization.model.dto.PermissionDto;
+import vn.com.atomi.charge.authorization.model.dto.NoticeRecipientOptionDto;
 import vn.com.atomi.charge.authorization.model.dto.RoleDto;
 import vn.com.atomi.charge.authorization.model.dto.StaffActivityDto;
 import vn.com.atomi.charge.authorization.model.dto.StaffAccountDto;
@@ -116,6 +117,12 @@ public class AuthorController {
 	@PreAuthorize("hasAuthority('USER_VIEW')")
 	public BaseResponse<List<String>> getUserRoles(@PathVariable String userId) {
 		return authorService.getUserRoles(userId);
+	}
+
+	@GetMapping("/api/v1/users/notice-recipients")
+	@PreAuthorize("hasAuthority('NOTICE_BROADCAST')")
+	public BaseResponse<List<NoticeRecipientOptionDto>> getNoticeRecipientOptions() {
+		return authorService.getNoticeRecipientOptions();
 	}
 
 	@GetMapping("/api/v1/users/me/roles")

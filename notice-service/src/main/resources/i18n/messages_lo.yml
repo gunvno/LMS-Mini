@@ -1,3 +1,10 @@
 notice:
   not_found: "ບໍ່ພົບແຈ້ງເຕືອນ"
   invalid_status: "ສະຖານະແຈ້ງເຕືອນບໍ່ຖືກຕ້ອງ"
+  invalid_request: "ຄໍາຮ້ອງຂໍສົ່ງແຈ້ງເຕືອນບໍ່ຖືກຕ້ອງ"
+  no_recipient: "ບໍ່ພົບຜູ້ຮັບແຈ້ງເຕືອນ"
+device:
+  installation_id_required: "ຈໍາເປັນຕ້ອງມີລະຫັດການຕິດຕັ້ງ Firebase"
+  token_required: "ຈໍາເປັນຕ້ອງມີລະຫັດ Firebase ຂອງອຸປະກອນ"
+user:
+  not_found: "ບໍ່ພົບຜູ້ໃຊ້"

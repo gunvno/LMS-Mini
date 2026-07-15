@@ -9,6 +9,8 @@ import java.util.Optional;
 
 @Repository
 public interface UserRoleRepository extends BaseRepository<UserRoleEntity, String> {
+    List<UserRoleEntity> findByDeletedAtIsNull();
+
     List<UserRoleEntity> findByUserIdAndDeletedAtIsNull(String userId);
 
     List<UserRoleEntity> findByRoleIdAndDeletedAtIsNull(String roleId);
