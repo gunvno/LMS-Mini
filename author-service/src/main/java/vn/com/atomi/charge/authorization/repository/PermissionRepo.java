@@ -8,6 +8,8 @@ import java.util.Optional;
 
 @Repository
 public interface PermissionRepo extends BaseRepository<PermissionEntity, String> {
+	Optional<PermissionEntity> findByCode(String code);
+
 	Optional<PermissionEntity> findByCodeAndDeletedAtIsNull(String code);
 
 	boolean existsByCodeAndDeletedAtIsNull(String code);

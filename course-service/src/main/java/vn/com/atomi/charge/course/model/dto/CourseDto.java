@@ -46,7 +46,7 @@ public class CourseDto extends BaseDto<String> {
     private BigDecimal price;
 
     @NotNull(groups = Create.class)
-    @Schema(example = "DRAFT", allowableValues = {"DRAFT", "PENDING_REVIEW", "PUBLISHED", "REJECTED", "ARCHIVED"})
+    @Schema(example = "DRAFT", allowableValues = {"DRAFT", "INSTRUCTOR_DRAFT", "PENDING_REVIEW", "PUBLISHED", "REJECTED", "ARCHIVED"})
     private CourseStatus status;
 
     private String rejectReason;

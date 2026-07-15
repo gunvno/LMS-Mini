@@ -15,12 +15,15 @@ import vn.com.atomi.charge.quiz.model.entity.QuizEntity;
 import vn.com.atomi.charge.quiz.model.enums.QuizStatus;
 import vn.com.atomi.charge.quiz.repository.QuizAttemptRepository;
 import vn.com.atomi.charge.quiz.repository.QuizRepository;
-import vn.com.atomi.charge.quiz.client.CourseClient;
 import vn.com.atomi.charge.quiz.service.interfaces.QuizService;
 import vn.com.atomi.charge.quiz.service.internal.QuizConfigurationValidator;
 import vn.com.atomi.charge.base.model.request.BaseRequest;
 import vn.com.atomi.charge.base.model.response.BaseResponse;
+import vn.com.atomi.charge.base.repository.BaseSpecification;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.util.List;
 import java.util.Map;
@@ -32,8 +35,6 @@ implements QuizService {
     @Autowired
     private QuizAttemptRepository attemptRepository;
     @Autowired
-    private CourseClient courseClient;
-    @Autowired
     private QuizOwnershipService ownershipService;
     @Autowired
     private QuizConfigurationValidator configurationValidator;
@@ -41,7 +42,18 @@ implements QuizService {
     @Override
     public BaseResponse<Page<QuizDto>> getAll(Map<String, String> params, Pageable pageable) {
         if (ownershipService.canReviewCourses()) {
-            return super.getAll(params, pageable);
+            List<String> visibleCourseIds = ownershipService.getVisibleCourseIds();
+            if (visibleCourseIds.isEmpty()) {
+                return BaseResponse.success(HttpStatus.OK, Page.empty(pageable));
+            }
+            BaseSpecification<QuizEntity> filters = new BaseSpecification<>(
+                    params == null ? Map.of() : params);
+            Specification<QuizEntity> visibleCourses = (root, query, criteriaBuilder) ->
+                    root.get("courseId").in(visibleCourseIds);
+            Sort sort = Sort.by(Sort.Direction.DESC, "lastModifiedDate", "createdDate");
+            Pageable sorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+            Page<QuizEntity> result = repository.findAll(filters.and(visibleCourses), sorted);
+            return BaseResponse.success(HttpStatus.OK, result.map(mapper::toDto));
         }
 
         QuizEntity scopedQuiz = resolveScopedQuiz(params);
@@ -141,20 +153,7 @@ implements QuizService {
     }
 
     private void assertCanManageCourse(String courseId) {
-        if (canReviewCourses()) {
-            return;
-        }
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userId = authentication == null ? null : authentication.getName();
-        if (userId == null || !Boolean.TRUE.equals(courseClient.isInstructorOwner(courseId, userId))) {
-            throw new AccessDeniedException("common.access_denied");
-        }
-    }
-
-    private boolean canReviewCourses() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(authority -> "COURSE_REVIEW".equals(authority.getAuthority()));
+        ownershipService.assertCanManageCourse(courseId);
     }
 
     private QuizEntity resolveScopedQuiz(Map<String, String> params) {

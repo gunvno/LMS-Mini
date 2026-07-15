@@ -9,8 +9,12 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.AuthenticationTrustResolver;
+import org.springframework.security.authentication.AuthenticationTrustResolverImpl;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import vn.com.atomi.charge.chat.model.exception.ChatException;
 import vn.com.atomi.charge.chat.security.ConversationAccessService;
 import vn.com.atomi.charge.chat.security.AuthenticatedChatUserService;
@@ -29,7 +33,8 @@ public class WebSocketConversationInterceptor implements ChannelInterceptor {
     private static final Pattern SUPPORT_TOPIC =
             Pattern.compile("^/topic/support/conversations/([^/]+)$");
     private static final String AI_CHAT_AUTHORITY = "AI_CHAT";
-    private static final String SUPPORT_CHAT_AUTHORITY = "SUPPORT_CHAT";
+    private static final AuthenticationTrustResolver AUTHENTICATION_TRUST_RESOLVER =
+            new AuthenticationTrustResolverImpl();
 
     private final ConversationAccessService accessService;
     private final SupportConversationAccessService supportAccessService;
@@ -62,11 +67,9 @@ public class WebSocketConversationInterceptor implements ChannelInterceptor {
                     List.of(new SimpleGrantedAuthority(AI_CHAT_AUTHORITY))));
             return;
         }
-        if (accessor.getUser() != null && accessor.getUser().getName() != null) {
-            accessor.setUser(new UsernamePasswordAuthenticationToken(
-                    accessor.getUser().getName(),
-                    null,
-                    List.of(new SimpleGrantedAuthority(SUPPORT_CHAT_AUTHORITY))));
+        if (accessor.getUser() instanceof Authentication authentication
+                && isAuthenticatedHuman(authentication)) {
+            // Keep the trusted authenticated principal populated during the HTTP handshake.
             return;
         }
         String userId = authenticatedUserService.requireUserId(
@@ -74,7 +77,7 @@ public class WebSocketConversationInterceptor implements ChannelInterceptor {
         accessor.setUser(new UsernamePasswordAuthenticationToken(
                 userId,
                 null,
-                List.of(new SimpleGrantedAuthority(SUPPORT_CHAT_AUTHORITY))));
+                List.of()));
     }
 
     private void authorizeSubscription(StompHeaderAccessor accessor) {
@@ -90,7 +93,11 @@ public class WebSocketConversationInterceptor implements ChannelInterceptor {
             return;
         }
         Matcher supportMatcher = SUPPORT_TOPIC.matcher(destination);
-        if (supportMatcher.matches() && hasAuthority(accessor, SUPPORT_CHAT_AUTHORITY)) {
+        if (supportMatcher.matches()) {
+            if (!(accessor.getUser() instanceof Authentication authentication)
+                    || !isAuthenticatedHuman(authentication)) {
+                throw new ChatException(HttpStatus.UNAUTHORIZED, "WebSocket chưa được xác thực");
+            }
             supportAccessService.require(supportMatcher.group(1), accessor.getUser().getName());
             return;
         }
@@ -98,8 +105,19 @@ public class WebSocketConversationInterceptor implements ChannelInterceptor {
     }
 
     private boolean hasAuthority(StompHeaderAccessor accessor, String authority) {
-        return accessor.getUser() instanceof UsernamePasswordAuthenticationToken authentication
-                && authentication.getAuthorities().stream()
+        return accessor.getUser() instanceof Authentication authentication
+                && hasAuthority(authentication, authority);
+    }
+
+    private boolean isAuthenticatedHuman(Authentication authentication) {
+        return authentication.isAuthenticated()
+                && !AUTHENTICATION_TRUST_RESOLVER.isAnonymous(authentication)
+                && StringUtils.hasText(authentication.getName())
+                && !hasAuthority(authentication, AI_CHAT_AUTHORITY);
+    }
+
+    private boolean hasAuthority(Authentication authentication, String authority) {
+        return authentication.getAuthorities().stream()
                 .anyMatch(item -> authority.equals(item.getAuthority()));
     }
 }

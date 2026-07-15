@@ -6,7 +6,9 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
 import vn.com.atomi.charge.base.model.enums.BaseErrorCode;
 import vn.com.atomi.charge.base.model.response.BaseResponse;
+import vn.com.atomi.charge.base.repository.BaseSpecification;
 import vn.com.atomi.charge.base.service.BaseService;
 import vn.com.atomi.charge.base.util.StringUtil;
 import vn.com.atomi.charge.course.mapper.ImageMapper;
@@ -30,6 +33,7 @@ import vn.com.atomi.charge.course.model.storage.StorageFile;
 import vn.com.atomi.charge.course.model.storage.StorageUploadResult;
 import vn.com.atomi.charge.course.repository.CourseRepository;
 import vn.com.atomi.charge.course.repository.ImageRepository;
+import vn.com.atomi.charge.course.security.CourseVisibilityPolicy;
 import vn.com.atomi.charge.course.service.interfaces.ImageService;
 import vn.com.atomi.charge.course.service.interfaces.StorageService;
 
@@ -101,7 +105,14 @@ public class ImageServiceImpl
     @Override
     public BaseResponse<Page<ImageDto>> getAll(Map<String, String> params, Pageable pageable) {
         if (canReviewCourses()) {
-            return super.getAll(params, pageable);
+            Sort sort = Sort.by(Sort.Direction.DESC, "lastModifiedDate", "createdDate");
+            Pageable sorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+            BaseSpecification<ImageEntity> filters = new BaseSpecification<>(
+                    params == null ? Map.of() : params);
+            Page<ImageEntity> result = repository.findAll(
+                    filters.and(CourseVisibilityPolicy.reviewerVisibleImages(currentUserId())),
+                    sorted);
+            return BaseResponse.success(HttpStatus.OK, result.map(mapper::toDto));
         }
         if (!hasAuthority("IMAGE_MANAGE")) {
             throw new AccessDeniedException("common.access_denied");
@@ -239,12 +250,13 @@ public class ImageServiceImpl
     }
 
     private void assertCanManageCourse(String courseId) {
-        if (canReviewCourses()) {
-            return;
-        }
         CourseEntity course = StringUtils.hasText(courseId)
                 ? courseRepository.findEntityById(courseId).orElse(null)
                 : null;
+        if (canReviewCourses()) {
+            assertReviewerCanAccessCourse(course);
+            return;
+        }
         if (course == null || !currentUserId().equals(course.getInstructorId())) {
             throw new AccessDeniedException("common.access_denied");
         }
@@ -260,13 +272,23 @@ public class ImageServiceImpl
     }
 
     private void assertCanViewCourseImages(CourseEntity course) {
-        if (course.getStatus() == CourseStatus.PUBLISHED || canReviewCourses()) {
+        if (course.getStatus() == CourseStatus.PUBLISHED) {
+            return;
+        }
+        if (canReviewCourses()) {
+            assertReviewerCanAccessCourse(course);
             return;
         }
         if (hasAuthority("IMAGE_MANAGE") && currentUserId().equals(course.getInstructorId())) {
             return;
         }
         throw new AccessDeniedException("common.access_denied");
+    }
+
+    private void assertReviewerCanAccessCourse(CourseEntity course) {
+        if (!CourseVisibilityPolicy.isVisibleToReviewer(course, currentUserId())) {
+            throw new AccessDeniedException("common.access_denied");
+        }
     }
 
     private boolean canReviewCourses() {

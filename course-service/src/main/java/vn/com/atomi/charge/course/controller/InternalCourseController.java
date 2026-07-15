@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.security.access.prepost.PreAuthorize;
 import vn.com.atomi.charge.course.service.interfaces.CourseService;
 import vn.com.atomi.charge.course.model.dto.CourseDto;
 import vn.com.atomi.charge.base.model.response.BaseResponse;
@@ -45,6 +46,18 @@ public class InternalCourseController {
     @GetMapping("/instructors/{userId}/ids")
     public List<String> getInstructorCourseIds(@PathVariable String userId) {
         return courseService.getInstructorCourseIds(userId);
+    }
+
+    @GetMapping("/{id}/reviewer-visible")
+    @PreAuthorize("hasAuthority('COURSE_REVIEW')")
+    public Boolean isVisibleToReviewer(@PathVariable String id) {
+        return courseService.isVisibleToReviewer(id);
+    }
+
+    @GetMapping("/reviewer-visible/ids")
+    @PreAuthorize("hasAuthority('COURSE_REVIEW')")
+    public List<String> getReviewerVisibleCourseIds() {
+        return courseService.getReviewerVisibleCourseIds();
     }
 
     @GetMapping("/published-catalog")

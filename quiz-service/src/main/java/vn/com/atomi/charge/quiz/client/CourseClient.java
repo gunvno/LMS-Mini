@@ -15,4 +15,10 @@ public interface CourseClient {
 
     @GetMapping("/internal/v1/courses/instructors/{userId}/ids")
     List<String> getInstructorCourseIds(@PathVariable("userId") String userId);
+
+    @GetMapping("/internal/v1/courses/{courseId}/reviewer-visible")
+    Boolean isVisibleToReviewer(@PathVariable("courseId") String courseId);
+
+    @GetMapping("/internal/v1/courses/reviewer-visible/ids")
+    List<String> getReviewerVisibleCourseIds();
 }

@@ -1,6 +1,6 @@
 course:
   not_found: "Course not found"
-  invalid_submit_review_status: "Only DRAFT or REJECTED courses can be submitted for review"
+  invalid_submit_review_status: "Only INSTRUCTOR_DRAFT, legacy DRAFT, or REJECTED courses can be submitted for review"
 image:
   file_required: "Please choose an image file"
   invalid_content_type: "Uploaded file must be an image"

@@ -96,7 +96,7 @@ public class CourseController extends BaseController<CourseService, CourseDto> {
     }
 
     @PostMapping("/{id}/submit-review")
-    @PreAuthorize("hasAuthority('COURSE_MANAGE')")
+    @PreAuthorize("hasAuthority('COURSE_SUBMIT_REVIEW')")
     public ResponseEntity<?> submitReview(@PathVariable String id) {
         return ResponseEntity.ok(service.submitReview(id));
     }

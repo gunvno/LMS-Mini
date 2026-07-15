@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,22 +29,26 @@ public class SupportChatController {
     private final SupportChatService supportChatService;
 
     @PostMapping("/courses/{courseId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BaseResponse<SupportConversationResponse>> createOrGet(@PathVariable String courseId) {
         return ResponseEntity.ok(BaseResponse.success(HttpStatus.OK, supportChatService.createOrGet(courseId)));
     }
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BaseResponse<List<SupportConversationResponse>>> getMyConversations() {
         return ResponseEntity.ok(BaseResponse.success(HttpStatus.OK, supportChatService.getMyConversations()));
     }
 
     @GetMapping("/{conversationId}/messages")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BaseResponse<List<SupportMessageResponse>>> getMessages(
             @PathVariable String conversationId) {
         return ResponseEntity.ok(BaseResponse.success(HttpStatus.OK, supportChatService.getMessages(conversationId)));
     }
 
     @PostMapping("/{conversationId}/messages")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BaseResponse<SupportMessageResponse>> sendMessage(
             @PathVariable String conversationId,
             @RequestBody @Valid SendSupportMessageRequest request) {
@@ -53,6 +58,7 @@ public class SupportChatController {
     }
 
     @PostMapping("/{conversationId}/read")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BaseResponse<Void>> markRead(@PathVariable String conversationId) {
         supportChatService.markRead(conversationId);
         return ResponseEntity.ok(BaseResponse.success(HttpStatus.OK, null));

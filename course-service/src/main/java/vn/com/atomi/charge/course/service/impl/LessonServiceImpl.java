@@ -15,6 +15,7 @@ import org.springframework.util.StringUtils;
 import vn.com.atomi.charge.base.model.enums.BaseErrorCode;
 import vn.com.atomi.charge.base.model.request.BaseRequest;
 import vn.com.atomi.charge.base.model.response.BaseResponse;
+import vn.com.atomi.charge.base.repository.BaseSpecification;
 import vn.com.atomi.charge.base.service.BaseService;
 import vn.com.atomi.charge.base.util.StringUtil;
 import vn.com.atomi.charge.course.mapper.LessonMapper;
@@ -25,6 +26,7 @@ import vn.com.atomi.charge.course.model.entity.LessonEntity;
 import vn.com.atomi.charge.course.model.enums.CourseStatus;
 import vn.com.atomi.charge.course.repository.CourseRepository;
 import vn.com.atomi.charge.course.repository.LessonRepository;
+import vn.com.atomi.charge.course.security.CourseVisibilityPolicy;
 import vn.com.atomi.charge.course.service.interfaces.CourseService;
 import vn.com.atomi.charge.course.service.interfaces.LessonService;
 
@@ -47,7 +49,14 @@ public class LessonServiceImpl
     @Override
     public BaseResponse<Page<LessonDto>> getAll(Map<String, String> params, Pageable pageable) {
         if (canReviewCourses()) {
-            return super.getAll(params, pageable);
+            Sort sort = Sort.by(Sort.Direction.DESC, "lastModifiedDate", "createdDate");
+            Pageable sorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+            BaseSpecification<LessonEntity> filters = new BaseSpecification<>(
+                    params == null ? Map.of() : params);
+            Page<LessonEntity> result = repository.findAll(
+                    filters.and(CourseVisibilityPolicy.reviewerVisibleLessons(currentUserId())),
+                    sorted);
+            return BaseResponse.success(HttpStatus.OK, result.map(mapper::toDto));
         }
         if (!isInstructorRequest()) {
             throw new AccessDeniedException("common.access_denied");
@@ -65,6 +74,7 @@ public class LessonServiceImpl
                 .orElseThrow(() -> new AccessDeniedException("common.access_denied"));
         LessonDto dto = mapper.toDto(lesson);
         if (canReviewCourses()) {
+            assertReviewerCanAccessCourse(lesson.getCourseId());
             dto.setLocked(false);
         } else if (isInstructorRequest()) {
             assertCanManageCourse(lesson.getCourseId());
@@ -212,7 +222,9 @@ public class LessonServiceImpl
         }
         boolean studentRequest = !isInstructorRequest() && !canReviewCourses();
         List<String> accessibleLessonIds = List.of();
-        if (isInstructorRequest()) {
+        if (canReviewCourses()) {
+            assertReviewerCanAccessCourse(optionalCourse.get());
+        } else if (isInstructorRequest()) {
             assertCanManageCourse(courseId);
         } else if (studentRequest) {
             assertPublishedCourse(courseId);
@@ -323,13 +335,30 @@ public class LessonServiceImpl
     }
 
     private void assertCanManageCourse(String courseId) {
-        if (!isInstructorRequest() || canReviewCourses()) {
-            return;
-        }
         CourseEntity course = StringUtils.hasText(courseId)
                 ? courseRepository.findEntityById(courseId).orElse(null)
                 : null;
+        if (canReviewCourses()) {
+            assertReviewerCanAccessCourse(course);
+            return;
+        }
+        if (!isInstructorRequest()) {
+            return;
+        }
         if (course == null || !currentUserId().equals(course.getInstructorId())) {
+            throw new AccessDeniedException("common.access_denied");
+        }
+    }
+
+    private void assertReviewerCanAccessCourse(String courseId) {
+        CourseEntity course = StringUtils.hasText(courseId)
+                ? courseRepository.findEntityById(courseId).orElse(null)
+                : null;
+        assertReviewerCanAccessCourse(course);
+    }
+
+    private void assertReviewerCanAccessCourse(CourseEntity course) {
+        if (!CourseVisibilityPolicy.isVisibleToReviewer(course, currentUserId())) {
             throw new AccessDeniedException("common.access_denied");
         }
     }

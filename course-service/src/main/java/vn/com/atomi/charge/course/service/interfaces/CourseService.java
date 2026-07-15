@@ -24,6 +24,8 @@ public interface CourseService
     Boolean checkPublishedCourse(String courseId);
     Boolean isInstructorOwner(String courseId, String userId);
     List<String> getInstructorCourseIds(String userId);
+    Boolean isVisibleToReviewer(String courseId);
+    List<String> getReviewerVisibleCourseIds();
     BaseResponse<Page<CourseDto>> getPublishedCourses(String categoryId, Pageable pageable);
     BaseResponse<CourseDto> getPublishedCourseDetails(String id);
     BaseResponse<List<CourseCatalogResponse>> getPublishedCatalog(int limit);

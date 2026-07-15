@@ -38,6 +38,11 @@ public class DataInitializer implements ApplicationRunner {
 
     private static final String STUDENT_USERNAME = "student";
 
+    private static final List<String> RETIRED_PERMISSION_CODES = List.of(
+            "SUPPORT_CHAT_VIEW",
+            "SUPPORT_CHAT_SEND"
+    );
+
     private static final Map<String, PermissionSeed> PERMISSIONS = new LinkedHashMap<>();
 
     private static final List<String> ADMIN_PERMISSIONS = List.of(
@@ -58,6 +63,7 @@ public class DataInitializer implements ApplicationRunner {
             "STAFF_ACTIVITY_VIEW",
             "COURSE_VIEW",
             "COURSE_MANAGE",
+            "COURSE_SUBMIT_REVIEW",
             "COURSE_REVIEW",
             "CATEGORY_VIEW",
             "CATEGORY_MANAGE",
@@ -92,6 +98,7 @@ public class DataInitializer implements ApplicationRunner {
     private static final List<String> INSTRUCTOR_PERMISSIONS = List.of(
             "COURSE_VIEW",
             "COURSE_MANAGE",
+            "COURSE_SUBMIT_REVIEW",
             "CATEGORY_VIEW",
             "CATEGORY_MANAGE",
             "LESSON_VIEW",
@@ -156,6 +163,7 @@ public class DataInitializer implements ApplicationRunner {
         permission("STAFF_ACTIVITY_VIEW", "Staff Activity View", "View staff activity");
         permission("COURSE_VIEW", "Course View", "View courses");
         permission("COURSE_MANAGE", "Course Manage", "Create and update courses");
+        permission("COURSE_SUBMIT_REVIEW", "Course Submit Review", "Submit owned course drafts for review");
         permission("COURSE_REVIEW", "Course Review", "Approve/reject/archive courses");
         permission("CATEGORY_VIEW", "Category View", "View course categories");
         permission("CATEGORY_MANAGE", "Category Manage", "Manage course categories");
@@ -205,6 +213,7 @@ public class DataInitializer implements ApplicationRunner {
         RoleEntity student = ensureRole(RoleCode.STUDENT, "Student", "Course student");
 
         ensurePermissions();
+        retireObsoletePermissions();
 
         assignPermissions(admin, ADMIN_PERMISSIONS);
         assignPermissions(instructor, INSTRUCTOR_PERMISSIONS);
@@ -233,6 +242,35 @@ public class DataInitializer implements ApplicationRunner {
     private void ensurePermissions() {
         PERMISSIONS.values().forEach(permission ->
                 ensurePermission(permission.code(), permission.name(), permission.description()));
+    }
+
+    private void retireObsoletePermissions() {
+        RETIRED_PERMISSION_CODES.forEach(code -> permissionRepository
+                .findByCode(code)
+                .ifPresent(this::retirePermission));
+    }
+
+    private void retirePermission(PermissionEntity permission) {
+        LocalDateTime now = LocalDateTime.now();
+        boolean permissionWasActive = permission.getDeletedAt() == null;
+        List<String> mappingIds = rolePermissionRepository
+                .findByPermissionIdAndDeletedAtIsNull(permission.getId())
+                .stream()
+                .map(RolePermissionEntity::getId)
+                .toList();
+        if (!mappingIds.isEmpty()) {
+            rolePermissionRepository.softDelete(mappingIds, now, "system", now);
+        }
+        if (permissionWasActive) {
+            permission.setStatus(PermissionStatus.INACTIVE);
+            permission.setLastModifiedBy("system");
+            permission.setLastModifiedDate(now);
+            permission.setDeletedAt(now);
+            permissionRepository.save(permission);
+        }
+        if (permissionWasActive || !mappingIds.isEmpty()) {
+            log.warn("Retired obsolete LMS permission and active role mappings. code={}", permission.getCode());
+        }
     }
 
     private PermissionEntity ensurePermission(String code, String name, String description) {

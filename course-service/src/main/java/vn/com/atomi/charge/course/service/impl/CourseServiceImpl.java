@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import vn.com.atomi.charge.base.model.request.BaseRequest;
 import vn.com.atomi.charge.base.model.response.BaseResponse;
+import vn.com.atomi.charge.base.repository.BaseSpecification;
 import vn.com.atomi.charge.base.service.BaseService;
 import vn.com.atomi.charge.course.mapper.CourseMapper;
 import vn.com.atomi.charge.course.model.dto.CourseDto;
@@ -21,6 +22,7 @@ import vn.com.atomi.charge.course.model.enums.CourseStatus;
 import vn.com.atomi.charge.course.model.request.RejectCourseRequest;
 import vn.com.atomi.charge.course.model.response.CourseCatalogResponse;
 import vn.com.atomi.charge.course.repository.CourseRepository;
+import vn.com.atomi.charge.course.security.CourseVisibilityPolicy;
 import vn.com.atomi.charge.course.service.interfaces.CourseService;
 
 import java.util.List;
@@ -34,11 +36,16 @@ public class CourseServiceImpl
 
     @Override
     public BaseResponse<Page<CourseDto>> getAll(Map<String, String> params, Pageable pageable) {
-        if (canReviewCourses()) {
-            return super.getAll(params, pageable);
-        }
         Sort sort = Sort.by(Sort.Direction.DESC, "lastModifiedDate", "createdDate");
         Pageable sorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+        if (canReviewCourses()) {
+            BaseSpecification<CourseEntity> filters = new BaseSpecification<>(
+                    params == null ? Map.of() : params);
+            Page<CourseEntity> result = repository.findAll(
+                    filters.and(CourseVisibilityPolicy.reviewerVisibleCourses(currentUserId())),
+                    sorted);
+            return BaseResponse.success(HttpStatus.OK, result.map(mapper::toDto));
+        }
         Page<CourseEntity> result = canManageCourses()
                 ? repository.findByInstructorIdAndDeletedAtIsNull(currentUserId(), sorted)
                 : repository.findByStatusAndDeletedAtIsNull(CourseStatus.PUBLISHED, sorted);
@@ -47,12 +54,11 @@ public class CourseServiceImpl
 
     @Override
     public BaseResponse<CourseDto> getDetails(String id) {
-        if (canReviewCourses()) {
-            return super.getDetails(id);
-        }
         CourseEntity course = repository.findEntityById(id)
                 .orElseThrow(() -> new AccessDeniedException("common.access_denied"));
-        if (canManageCourses()) {
+        if (canReviewCourses()) {
+            assertReviewerCanAccess(course);
+        } else if (canManageCourses()) {
             assertInstructorOwns(course);
         } else if (course.getStatus() != CourseStatus.PUBLISHED) {
             throw new AccessDeniedException("common.access_denied");
@@ -64,8 +70,11 @@ public class CourseServiceImpl
     @Transactional(rollbackFor = Exception.class)
     public BaseResponse<CourseDto> create(BaseRequest<CourseDto> request) {
         if (!canReviewCourses()) {
-            request.getData().setStatus(CourseStatus.DRAFT);
+            request.getData().setStatus(CourseStatus.INSTRUCTOR_DRAFT);
             request.getData().setInstructorId(currentUserId());
+        } else if (request.getData().getStatus() == CourseStatus.INSTRUCTOR_DRAFT) {
+            // INSTRUCTOR_DRAFT is reserved for drafts created outside the review role.
+            request.getData().setStatus(CourseStatus.DRAFT);
         }
         return super.create(request);
     }
@@ -73,9 +82,14 @@ public class CourseServiceImpl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BaseResponse<CourseDto> update(BaseRequest<CourseDto> request) {
-        if (!canReviewCourses()) {
-            CourseEntity existing = repository.findEntityById(request.getData().getId())
-                    .orElseThrow(() -> new AccessDeniedException("common.access_denied"));
+        CourseEntity existing = repository.findEntityById(request.getData().getId())
+                .orElseThrow(() -> new AccessDeniedException("common.access_denied"));
+        if (canReviewCourses()) {
+            assertReviewerCanAccess(existing);
+            if (request.getData().getStatus() == CourseStatus.INSTRUCTOR_DRAFT) {
+                request.getData().setStatus(existing.getStatus());
+            }
+        } else {
             assertInstructorOwns(existing);
             request.getData().setInstructorId(existing.getInstructorId());
             request.getData().setStatus(existing.getStatus());
@@ -88,9 +102,11 @@ public class CourseServiceImpl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BaseResponse<CourseDto> delete(String id) {
-        if (!canReviewCourses()) {
-            CourseEntity course = repository.findEntityById(id)
-                    .orElseThrow(() -> new AccessDeniedException("common.access_denied"));
+        CourseEntity course = repository.findEntityById(id)
+                .orElseThrow(() -> new AccessDeniedException("common.access_denied"));
+        if (canReviewCourses()) {
+            assertReviewerCanAccess(course);
+        } else {
             assertInstructorOwns(course);
         }
         return super.delete(id);
@@ -99,12 +115,10 @@ public class CourseServiceImpl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BaseResponse<CourseDto> delete(List<String> ids) {
-        if (!canReviewCourses()) {
-            ids.stream()
-                    .map(id -> repository.findEntityById(id)
-                            .orElseThrow(() -> new AccessDeniedException("common.access_denied")))
-                    .forEach(this::assertInstructorOwns);
-        }
+        ids.stream()
+                .map(id -> repository.findEntityById(id)
+                        .orElseThrow(() -> new AccessDeniedException("common.access_denied")))
+                .forEach(canReviewCourses() ? this::assertReviewerCanAccess : this::assertInstructorOwns);
         return super.delete(ids);
     }
 
@@ -135,7 +149,7 @@ public class CourseServiceImpl
 
         CourseEntity course = optionalCourse.get();
 
-        assertInstructorOwns(course);
+        assertStrictInstructorOwnership(course);
 
         if (!canSubmitReview(course)) {
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("course.invalid_submit_review_status"));
@@ -149,7 +163,9 @@ public class CourseServiceImpl
     }
 
     private boolean canSubmitReview(CourseEntity course) {
-        return course.getStatus() == CourseStatus.DRAFT || course.getStatus() == CourseStatus.REJECTED;
+        return course.getStatus() == CourseStatus.INSTRUCTOR_DRAFT
+                || course.getStatus() == CourseStatus.DRAFT
+                || course.getStatus() == CourseStatus.REJECTED;
     }
 
     private boolean canReviewCourses() {
@@ -178,6 +194,18 @@ public class CourseServiceImpl
         }
     }
 
+    private void assertStrictInstructorOwnership(CourseEntity course) {
+        if (course == null || !currentUserId().equals(course.getInstructorId())) {
+            throw new AccessDeniedException("common.access_denied");
+        }
+    }
+
+    private void assertReviewerCanAccess(CourseEntity course) {
+        if (!CourseVisibilityPolicy.isVisibleToReviewer(course, currentUserId())) {
+            throw new AccessDeniedException("common.access_denied");
+        }
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BaseResponse<CourseDto> approveCourse(String id) {
@@ -192,6 +220,7 @@ public class CourseServiceImpl
         }
 
         CourseEntity course = optionalCourse.get();
+        assertReviewerCanAccess(course);
 
         if (!course.getStatus().equals(CourseStatus.PENDING_REVIEW)) {
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("course.invalid_approve_course_status"));
@@ -217,6 +246,7 @@ public class CourseServiceImpl
         }
 
         CourseEntity course = optionalCourse.get();
+        assertReviewerCanAccess(course);
 
         if (!course.getStatus().equals(CourseStatus.PENDING_REVIEW)) {
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("course.invalid_approve_course_status"));
@@ -242,6 +272,7 @@ public class CourseServiceImpl
         }
 
         CourseEntity course = optionalCourse.get();
+        assertReviewerCanAccess(course);
 
         if (!course.getStatus().equals(CourseStatus.PUBLISHED)) {
             return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("course.invalid_archive_course_status"));
@@ -289,6 +320,20 @@ public class CourseServiceImpl
         return repository.findByInstructorIdAndDeletedAtIsNull(userId).stream()
                 .map(CourseEntity::getId)
                 .toList();
+    }
+
+    @Override
+    public Boolean isVisibleToReviewer(String courseId) {
+        if (!StringUtils.hasText(courseId)) {
+            return false;
+        }
+        return repository.existsByIdAndStatusNotAndDeletedAtIsNull(
+                courseId, CourseStatus.INSTRUCTOR_DRAFT);
+    }
+
+    @Override
+    public List<String> getReviewerVisibleCourseIds() {
+        return repository.findIdsByStatusNotAndDeletedAtIsNull(CourseStatus.INSTRUCTOR_DRAFT);
     }
 
     @Override

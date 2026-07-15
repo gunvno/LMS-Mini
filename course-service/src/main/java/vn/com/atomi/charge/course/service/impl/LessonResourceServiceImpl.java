@@ -6,7 +6,9 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
 import vn.com.atomi.charge.base.model.enums.BaseErrorCode;
 import vn.com.atomi.charge.base.model.response.BaseResponse;
+import vn.com.atomi.charge.base.repository.BaseSpecification;
 import vn.com.atomi.charge.base.service.BaseService;
 import vn.com.atomi.charge.base.util.StringUtil;
 import vn.com.atomi.charge.course.mapper.LessonResourceMapper;
@@ -32,6 +35,7 @@ import vn.com.atomi.charge.course.model.storage.StorageFile;
 import vn.com.atomi.charge.course.repository.LessonRepository;
 import vn.com.atomi.charge.course.repository.LessonResourceRepository;
 import vn.com.atomi.charge.course.repository.CourseRepository;
+import vn.com.atomi.charge.course.security.CourseVisibilityPolicy;
 import vn.com.atomi.charge.course.service.interfaces.LessonResourceService;
 import vn.com.atomi.charge.course.service.interfaces.StorageService;
 
@@ -98,7 +102,14 @@ public class LessonResourceServiceImpl
     @Override
     public BaseResponse<Page<LessonResourceDto>> getAll(Map<String, String> params, Pageable pageable) {
         if (canReviewCourses()) {
-            return super.getAll(params, pageable);
+            Sort sort = Sort.by(Sort.Direction.DESC, "lastModifiedDate", "createdDate");
+            Pageable sorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+            BaseSpecification<LessonResourceEntity> filters = new BaseSpecification<>(
+                    params == null ? Map.of() : params);
+            Page<LessonResourceEntity> result = repository.findAll(
+                    filters.and(CourseVisibilityPolicy.reviewerVisibleResources(currentUserId())),
+                    sorted);
+            return BaseResponse.success(HttpStatus.OK, result.map(mapper::toDto));
         }
         if (isInstructorRequest()) {
             String lessonId = params == null ? null : params.get("lessonId");
@@ -123,6 +134,7 @@ public class LessonResourceServiceImpl
         LessonResourceEntity resource = repository.findEntityById(id)
                 .orElseThrow(() -> new AccessDeniedException("common.access_denied"));
         if (canReviewCourses()) {
+            assertReviewerCanAccessLesson(resource.getLessonId());
             return BaseResponse.success(HttpStatus.OK, mapper.toDto(resource));
         }
         if (isInstructorRequest()) {
@@ -260,6 +272,7 @@ public class LessonResourceServiceImpl
 
     private void assertCanManageLesson(String lessonId) {
         if (canReviewCourses()) {
+            assertReviewerCanAccessLesson(lessonId);
             return;
         }
         LessonEntity lesson = StringUtils.hasText(lessonId)
@@ -325,6 +338,7 @@ public class LessonResourceServiceImpl
 
     private void assertCanViewResource(LessonResourceEntity resource) {
         if (canReviewCourses()) {
+            assertReviewerCanAccessLesson(resource.getLessonId());
             return;
         }
         if (isInstructorRequest()) {
@@ -335,6 +349,18 @@ public class LessonResourceServiceImpl
             throw new AccessDeniedException("common.access_denied");
         }
         assertStudentCanAccessLesson(resource.getLessonId());
+    }
+
+    private void assertReviewerCanAccessLesson(String lessonId) {
+        LessonEntity lesson = StringUtils.hasText(lessonId)
+                ? lessonRepository.findEntityById(lessonId).orElse(null)
+                : null;
+        CourseEntity course = lesson == null
+                ? null
+                : courseRepository.findEntityById(lesson.getCourseId()).orElse(null);
+        if (!CourseVisibilityPolicy.isVisibleToReviewer(course, currentUserId())) {
+            throw new AccessDeniedException("common.access_denied");
+        }
     }
 
     private String fileName(String filePath, String fallback) {

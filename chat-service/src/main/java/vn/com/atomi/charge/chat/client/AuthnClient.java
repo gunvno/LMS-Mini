@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import vn.com.atomi.charge.base.model.response.BaseResponse;
 import vn.com.atomi.charge.chat.model.dto.TokenIntrospectionDto;
 import vn.com.atomi.charge.chat.model.dto.UserSummaryDto;
@@ -14,7 +15,9 @@ import vn.com.atomi.charge.chat.model.request.TokenIntrospectionRequest;
 public interface AuthnClient {
 
     @PostMapping("/api/v1/auth/introspect")
-    BaseResponse<TokenIntrospectionDto> introspect(@RequestBody TokenIntrospectionRequest request);
+    BaseResponse<TokenIntrospectionDto> introspect(
+            @RequestHeader("X-Client-Portal") String portal,
+            @RequestBody TokenIntrospectionRequest request);
 
     @GetMapping("/internal/v1/AuthnUser/{userId}/info")
     BaseResponse<UserSummaryDto> getUser(@PathVariable String userId);

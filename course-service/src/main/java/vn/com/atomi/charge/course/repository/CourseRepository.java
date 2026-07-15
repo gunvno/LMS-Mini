@@ -2,6 +2,8 @@ package vn.com.atomi.charge.course.repository;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import vn.com.atomi.charge.base.repository.BaseRepository;
 import vn.com.atomi.charge.course.model.entity.CourseEntity;
 import vn.com.atomi.charge.course.model.enums.CourseStatus;
@@ -30,6 +32,17 @@ public interface CourseRepository extends BaseRepository<CourseEntity, String> {
     Page<CourseEntity> findByInstructorIdAndDeletedAtIsNull(String instructorId, Pageable pageable);
 
     List<CourseEntity> findByInstructorIdAndDeletedAtIsNull(String instructorId);
+
+    boolean existsByIdAndStatusNotAndDeletedAtIsNull(String id, CourseStatus excludedStatus);
+
+    @Query("""
+            SELECT course.id
+            FROM CourseEntity course
+            WHERE course.status <> :excludedStatus
+              AND course.deletedAt IS NULL
+            """)
+    List<String> findIdsByStatusNotAndDeletedAtIsNull(
+            @Param("excludedStatus") CourseStatus excludedStatus);
 
     List<CourseEntity> findByStatusAndDeletedAtIsNullOrderByPublishedAtDesc(
             CourseStatus status, Pageable pageable);

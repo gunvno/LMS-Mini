@@ -23,7 +23,10 @@ public class QuizOwnershipService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getAuthorities().stream()
                 .anyMatch(authority -> "COURSE_REVIEW".equals(authority.getAuthority()))) {
-            return;
+            if (Boolean.TRUE.equals(courseClient.isVisibleToReviewer(courseId))) {
+                return;
+            }
+            throw new AccessDeniedException("common.access_denied");
         }
         String userId = authentication == null ? null : authentication.getName();
         if (userId == null || !Boolean.TRUE.equals(courseClient.isInstructorOwner(courseId, userId))) {
@@ -36,7 +39,10 @@ public class QuizOwnershipService {
             throw new AccessDeniedException("common.access_denied");
         }
         if (canReviewCourses()) {
-            return;
+            if (Boolean.TRUE.equals(courseClient.isVisibleToReviewer(quiz.getCourseId()))) {
+                return;
+            }
+            throw new AccessDeniedException("common.access_denied");
         }
         Authentication authentication = authentication();
         String userId = authentication == null ? null : authentication.getName();
@@ -56,6 +62,10 @@ public class QuizOwnershipService {
         String userId = authentication == null ? null : authentication.getName();
         if (userId == null) {
             return List.of();
+        }
+        if (canReviewCourses()) {
+            List<String> ids = courseClient.getReviewerVisibleCourseIds();
+            return ids == null ? List.of() : ids;
         }
         if (hasAuthority("QUIZ_MANAGE") && !canReviewCourses()) {
             List<String> ids = courseClient.getInstructorCourseIds(userId);

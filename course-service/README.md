@@ -147,9 +147,24 @@ CourseServiceImpl.submitReview
 
 Business rule:
 
-- Only courses with status `DRAFT` or `REJECTED` can be submitted.
+- Instructor-created courses are stored as `INSTRUCTOR_DRAFT` and are private from reviewers until submitted.
+- Courses with status `INSTRUCTOR_DRAFT` or `REJECTED` can be submitted. Owned legacy `DRAFT` rows remain compatible.
 - When submitted, status becomes `PENDING_REVIEW`.
 - `rejectReason` is cleared because the course is waiting for review again.
+
+`DRAFT` now means an admin/reviewer draft and remains visible to every reviewer. Deployments that
+already contain instructor-owned `DRAFT` rows must migrate only verified instructor rows; this is
+not done automatically because course-service does not own role history and cannot safely tell an
+admin draft from an old instructor draft. After obtaining the IDs of users who have INSTRUCTOR but
+not ADMIN from author-service, a migration can use the following shape:
+
+```sql
+UPDATE tbl_courses
+SET status = 'INSTRUCTOR_DRAFT'
+WHERE status = 'DRAFT'
+  AND created_by = instructor_id
+  AND instructor_id IN (<verified-pure-instructor-user-ids>);
+```
 
 This is the pattern for custom functions:
 
@@ -179,7 +194,7 @@ valid values clearly:
 
 ```java
 @NotNull(groups = Create.class)
-@Schema(example = "DRAFT", allowableValues = {"DRAFT", "PENDING_REVIEW", "PUBLISHED", "REJECTED", "ARCHIVED"})
+@Schema(example = "DRAFT", allowableValues = {"DRAFT", "INSTRUCTOR_DRAFT", "PENDING_REVIEW", "PUBLISHED", "REJECTED", "ARCHIVED"})
 private CourseStatus status;
 ```
 

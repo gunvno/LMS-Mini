@@ -26,7 +26,13 @@ Các request sau khi tạo hội thoại dùng header `X-Chat-Token`. STOMP CONN
 - `POST /api/v1/support/conversations/{id}/read`: đánh dấu tin nhắn đã đọc.
 - Topic: `/topic/support/conversations/{id}`.
 
-Instructor chat yêu cầu JWT ở REST và header `Authorization: Bearer <token>` khi STOMP CONNECT.
+Support chat không dùng permission chức năng riêng: mọi endpoint REST và topic realtime chỉ yêu cầu
+người dùng đã đăng nhập. Người dùng vẫn phải là học viên hoặc giảng viên thuộc đúng hội thoại tương
+ứng; kiểm tra participant được thực hiện ở service cho cả REST và WebSocket.
+
+AI chat tại `/api/v1/chat/**` và topic `/topic/chat/**` tiếp tục dùng conversation token độc lập.
+Instructor chat yêu cầu JWT ở REST. Với STOMP, có thể dùng principal đã xác thực từ HTTP handshake
+hoặc `Authorization: Bearer <token>` trong frame CONNECT; token được introspect trước khi subscribe.
 Học viên chỉ tạo được hội thoại khi enrollment còn quyền truy cập; chỉ học viên và đúng instructor
 của khóa học được đọc hoặc subscribe hội thoại.
 

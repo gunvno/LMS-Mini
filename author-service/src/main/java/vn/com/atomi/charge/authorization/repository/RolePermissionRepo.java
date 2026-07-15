@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface RolePermissionRepo extends BaseRepository<RolePermissionEntity, String> {
 	List<RolePermissionEntity> findByRoleIdAndDeletedAtIsNull(String roleId);
+
+	List<RolePermissionEntity> findByPermissionIdAndDeletedAtIsNull(String permissionId);
 }
