@@ -5,12 +5,14 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
+import vn.com.atomi.charge.base.i18n.IMessageService;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -18,9 +20,12 @@ import java.security.MessageDigest;
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 10)
+@RequiredArgsConstructor
 public class InternalServiceSecurityFilter extends OncePerRequestFilter {
 
     private static final String INTERNAL_HEADER = "X-Internal-Service-Key";
+
+    private final IMessageService messageService;
 
     @Value("${internal.service-key:}")
     private String configuredKey;
@@ -38,7 +43,8 @@ public class InternalServiceSecurityFilter extends OncePerRequestFilter {
         if (!secureEquals(configuredKey, providedKey)) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"status\":\"FORBIDDEN\",\"message\":\"common.access_denied\"}");
+            response.getWriter().write("{\"status\":\"FORBIDDEN\",\"message\":\""
+                    + messageService.getMessage("security.access_denied") + "\"}");
             return;
         }
         filterChain.doFilter(request, response);

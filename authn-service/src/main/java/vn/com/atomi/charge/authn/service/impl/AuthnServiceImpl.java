@@ -15,11 +15,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import vn.com.atomi.charge.authn.client.AuthorClient;
 import vn.com.atomi.charge.authn.model.dto.AuthenticationResult;
 import vn.com.atomi.charge.authn.model.entity.AuthnUserEntity;
 import vn.com.atomi.charge.authn.model.entity.RefreshTokenEntity;
 import vn.com.atomi.charge.authn.model.enums.AuthnUserStatus;
+import vn.com.atomi.charge.authn.model.enums.ClientPortal;
 import vn.com.atomi.charge.authn.model.enums.ErrorCode;
 import vn.com.atomi.charge.authn.model.enums.RefreshTokenStatus;
 import vn.com.atomi.charge.authn.model.enums.UserLanguage;
@@ -37,12 +39,16 @@ import vn.com.atomi.charge.authn.repository.AuthnUserRepository;
 import vn.com.atomi.charge.authn.service.interfaces.AuthnService;
 import vn.com.atomi.charge.authn.service.interfaces.MailService;
 import vn.com.atomi.charge.base.model.exception.BusinessException;
+import vn.com.atomi.charge.base.model.response.BaseResponse;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -86,23 +92,24 @@ public class AuthnServiceImpl implements AuthnService {
 	}
 
 	@Override
-	public AuthenticationResult authenticate(AuthenticationRequest request) {
+	public AuthenticationResult authenticate(AuthenticationRequest request, ClientPortal portal) {
 		AuthnUserEntity user = userRepository.findByUsernameOrEmail(request.getUsername(), request.getUsername())
-				.orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED.getErrorCode()));
+				.orElseThrow(() -> businessException(ErrorCode.LOGIN_FAILED));
 
 		if (user.getStatus() != AuthnUserStatus.ACTIVE || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-			throw new BusinessException(ErrorCode.LOGIN_FAILED.getErrorCode());
+			throw businessException(ErrorCode.LOGIN_FAILED);
 		}
+		validatePortalAccess(user.getId(), portal);
 
 		user.setLastLoginAt(LocalDateTime.now());
 		userRepository.save(user);
-		return buildAuthResponse(user);
+		return buildAuthResponse(user, portal);
 	}
 
 	@Override
-	public IntrospectResponse introspect(IntrospectRequest request) {
+	public IntrospectResponse introspect(IntrospectRequest request, ClientPortal portal) {
 		try {
-			verifyToken(request.getToken());
+			verifyToken(request.getToken(), portal);
 			return IntrospectResponse.builder().valid(true).build();
 		} catch (Exception exception) {
 			return IntrospectResponse.builder().valid(false).build();
@@ -110,22 +117,25 @@ public class AuthnServiceImpl implements AuthnService {
 	}
 
 	@Override
-	public AuthenticationResult refreshToken(String refreshToken) {
+	public AuthenticationResult refreshToken(String refreshToken, ClientPortal portal) {
 		try {
-			SignedJWT jwt = verifyToken(refreshToken);
+			SignedJWT jwt = verifyToken(refreshToken, portal);
 			invalidateToken(jwt);
 
 			String userId = jwt.getJWTClaimsSet().getSubject();
 			AuthnUserEntity user = userRepository.findEntityById(userId)
-					.orElseThrow(() -> new BusinessException("UNAUTHENTICATED", "UNAUTHENTICATED"));
+					.orElseThrow(this::unauthenticatedException);
 
 			if (user.getStatus() != AuthnUserStatus.ACTIVE) {
-				throw new BusinessException("UNAUTHENTICATED", "UNAUTHENTICATED");
+				throw unauthenticatedException();
 			}
+			validatePortalAccess(user.getId(), portal);
 
-			return buildAuthResponse(user);
+			return buildAuthResponse(user, portal);
+		} catch (BusinessException exception) {
+			throw exception;
 		} catch (Exception exception) {
-			throw new BusinessException("UNAUTHENTICATED", "UNAUTHENTICATED");
+			throw unauthenticatedException();
 		}
 	}
 
@@ -147,32 +157,33 @@ public class AuthnServiceImpl implements AuthnService {
 	}
 
 	@Override
-	public void changePassword(String token, ChangePasswordRequest request) {
+	@Transactional
+	public void changePassword(String token, ChangePasswordRequest request, ClientPortal portal) {
 		try {
-			SignedJWT jwt = verifyToken(token);
+			SignedJWT jwt = verifyToken(token, portal);
 			AuthnUserEntity user = userRepository.findEntityById(jwt.getJWTClaimsSet().getSubject())
-					.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND.getErrorCode(), "USER_NOT_FOUND"));
+					.orElseThrow(() -> businessException(ErrorCode.USER_NOT_FOUND));
 
 			if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
-				throw new BusinessException(ErrorCode.INVALID_OLD_PASSWORD.getErrorCode(), "INVALID_OLD_PASSWORD");
+				throw businessException(ErrorCode.INVALID_OLD_PASSWORD);
 			}
 			if (!request.getNewPassword().equals(request.getConfirmPassword())) {
-				throw new BusinessException(ErrorCode.INVALID_CONFIRM_PASSWORD.getErrorCode(), "INVALID_CONFIRM_PASSWORD");
+				throw businessException(ErrorCode.INVALID_CONFIRM_PASSWORD);
 			}
 			if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
-				throw new BusinessException(ErrorCode.OLD_PASSWORD_EQUAL_NEW_PASSWORD.getErrorCode(), "OLD_PASSWORD_EQUAL_NEW_PASSWORD");
+				throw businessException(ErrorCode.OLD_PASSWORD_EQUAL_NEW_PASSWORD);
 			}
 
 			user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
 			user.setPasswordChangeAt(LocalDateTime.now());
 			user.setLastModifiedBy(user.getUsername());
 			user.setLastModifiedDate(LocalDateTime.now());
-			userRepository.save(user);
+			userRepository.saveAndFlush(user);
 			invalidateToken(jwt);
 		} catch (BusinessException exception) {
 			throw exception;
 		} catch (Exception exception) {
-			throw new BusinessException("UNAUTHENTICATED", "UNAUTHENTICATED");
+			throw unauthenticatedException();
 		}
 	}
 
@@ -233,9 +244,9 @@ public class AuthnServiceImpl implements AuthnService {
 	@Override
 	public void sendForgotPasswordOtp(String email) {
 		AuthnUserEntity user = userRepository.findByUsernameOrEmail(email, email)
-				.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND.getErrorCode(), "USER_NOT_FOUND"));
+				.orElseThrow(() -> businessException(ErrorCode.USER_NOT_FOUND));
 		if (user.getStatus() == AuthnUserStatus.DELETED) {
-			throw new BusinessException(ErrorCode.USER_NOT_FOUND.getErrorCode(), "USER_NOT_FOUND");
+			throw businessException(ErrorCode.USER_NOT_FOUND);
 		}
 		String normalizedEmail = normalizeEmail(email);
 		String otp = createOtp(normalizedEmail, "RESET_PASSWORD");
@@ -250,7 +261,7 @@ public class AuthnServiceImpl implements AuthnService {
 	@Override
 	public void resetPassword(ForgotPasswordResetRequest request) {
 		if (!request.getNewPassword().equals(request.getConfirmPassword())) {
-			throw new BusinessException(ErrorCode.INVALID_CONFIRM_PASSWORD.getErrorCode(), "INVALID_CONFIRM_PASSWORD");
+			throw businessException(ErrorCode.INVALID_CONFIRM_PASSWORD);
 		}
 
 		if (!verifyOtpValue(request.getEmail(), request.getInputOtp(), "RESET_PASSWORD", true)) {
@@ -258,7 +269,7 @@ public class AuthnServiceImpl implements AuthnService {
 		}
 
 		AuthnUserEntity user = userRepository.findByUsernameOrEmail(request.getEmail(), request.getEmail())
-				.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND.getErrorCode(), "USER_NOT_FOUND"));
+				.orElseThrow(() -> businessException(ErrorCode.USER_NOT_FOUND));
 		user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
 		user.setPasswordChangeAt(LocalDateTime.now());
 		user.setLastModifiedBy(user.getUsername());
@@ -312,11 +323,11 @@ public class AuthnServiceImpl implements AuthnService {
 	}
 
 	@Override
-	public UserInfoResponse getInfoByToken(String token) {
+	public UserInfoResponse getInfoByToken(String token, ClientPortal portal) {
 		try {
-			SignedJWT jwt = verifyToken(token);
+			SignedJWT jwt = verifyToken(token, portal);
 			AuthnUserEntity user = userRepository.findEntityById(jwt.getJWTClaimsSet().getSubject())
-					.orElseThrow(() -> new BusinessException("UNAUTHENTICATED", "UNAUTHENTICATED"));
+					.orElseThrow(this::unauthenticatedException);
 
 			return UserInfoResponse.builder()
 					.sub(user.getId())
@@ -326,11 +337,11 @@ public class AuthnServiceImpl implements AuthnService {
 					.family_name("")
 					.build();
 		} catch (Exception exception) {
-			throw new BusinessException("UNAUTHENTICATED", "UNAUTHENTICATED");
+			throw unauthenticatedException();
 		}
 	}
 
-	private AuthenticationResult buildAuthResponse(AuthnUserEntity user) {
+	private AuthenticationResult buildAuthResponse(AuthnUserEntity user, ClientPortal portal) {
 		try {
 			AuthenticationResponse response = AuthenticationResponse.builder()
 					.id(user.getId())
@@ -340,15 +351,15 @@ public class AuthnServiceImpl implements AuthnService {
 					.lastName(extractLastName(user.getFullName()))
 					.build();
 			return new AuthenticationResult(
-					generateToken(user, validDuration),
-					generateToken(user, refreshableDuration),
+					generateToken(user, validDuration, portal),
+					generateToken(user, refreshableDuration, portal),
 					response);
 		} catch (JOSEException exception) {
-			throw new BusinessException("INVALID_KEY", "INVALID_KEY");
+			throw new BusinessException("INVALID_KEY", "auth.invalid_key");
 		}
 	}
 
-	private String generateToken(AuthnUserEntity user, long durationSeconds) throws JOSEException {
+	private String generateToken(AuthnUserEntity user, long durationSeconds, ClientPortal portal) throws JOSEException {
 		Instant now = Instant.now();
 		Set<String> authorities = new LinkedHashSet<>();
 		JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
@@ -359,6 +370,7 @@ public class AuthnServiceImpl implements AuthnService {
 				.jwtID(UUID.randomUUID().toString())
 				.claim("username", user.getUsername())
 				.claim("email", user.getEmail())
+				.claim("portal", portal.name())
 				.claim("scope", String.join(" ", authorities))
 				.build();
 
@@ -371,11 +383,20 @@ public class AuthnServiceImpl implements AuthnService {
 		SignedJWT signedJWT = SignedJWT.parse(normalizeToken(token));
 		JWSVerifier verifier = new MACVerifier(signerKey.getBytes());
 		if (!signedJWT.verify(verifier)) {
-			throw new BusinessException("UNAUTHENTICATED", "UNAUTHENTICATED");
+			throw unauthenticatedException();
 		}
 		Date expirationTime = signedJWT.getJWTClaimsSet().getExpirationTime();
 		if (expirationTime == null || expirationTime.before(new Date()) || refreshTokenRepository.existsByTokenId(signedJWT.getJWTClaimsSet().getJWTID())) {
-			throw new BusinessException("UNAUTHENTICATED", "UNAUTHENTICATED");
+			throw unauthenticatedException();
+		}
+		return signedJWT;
+	}
+
+	private SignedJWT verifyToken(String token, ClientPortal portal) throws Exception {
+		SignedJWT signedJWT = verifyToken(token);
+		String tokenPortal = signedJWT.getJWTClaimsSet().getStringClaim("portal");
+		if (portal == null || !portal.name().equalsIgnoreCase(tokenPortal)) {
+			throw unauthenticatedException();
 		}
 		return signedJWT;
 	}
@@ -406,6 +427,43 @@ public class AuthnServiceImpl implements AuthnService {
 
 	private String normalizeEmail(String email) {
 		return email == null ? "" : email.trim().toLowerCase();
+	}
+
+	private BusinessException businessException(ErrorCode errorCode) {
+		return new BusinessException(errorCode.getErrorCode(), errorCode.getMessageKey());
+	}
+
+	private BusinessException unauthenticatedException() {
+		return new BusinessException("UNAUTHENTICATED", "security.invalid_token");
+	}
+
+	private void validatePortalAccess(String userId, ClientPortal portal) {
+		if (portal == null) {
+			throw new BusinessException("INVALID_PORTAL", "auth.portal_required");
+		}
+		try {
+			BaseResponse<List<String>> response = authorClient.getUserRoles(userId);
+			List<String> roles = response == null || response.getData() == null
+					? List.of()
+					: response.getData().stream()
+							.filter(Objects::nonNull)
+							.map(role -> role.trim().toUpperCase(Locale.ROOT))
+							.toList();
+			boolean allowed = portal == ClientPortal.STUDENT
+					? roles.contains("STUDENT")
+					: roles.contains("ADMIN") || roles.contains("INSTRUCTOR");
+			if (!allowed) {
+				String messageKey = portal == ClientPortal.STUDENT
+						? "auth.student_portal_forbidden"
+						: "auth.admin_portal_forbidden";
+				throw new BusinessException("FORBIDDEN", messageKey);
+			}
+		} catch (BusinessException exception) {
+			throw exception;
+		} catch (Exception exception) {
+			log.error("Could not verify portal access for userId={}", userId, exception);
+			throw new BusinessException("FORBIDDEN", "auth.portal_access_check_failed");
+		}
 	}
 
 	private String extractFirstName(String fullName) {

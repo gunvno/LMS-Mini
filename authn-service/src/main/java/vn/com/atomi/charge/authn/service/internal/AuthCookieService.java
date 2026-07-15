@@ -6,14 +6,15 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import vn.com.atomi.charge.authn.model.dto.AuthenticationResult;
+import vn.com.atomi.charge.authn.model.enums.ClientPortal;
 
 import java.time.Duration;
 
 @Service
 public class AuthCookieService {
 
-    public static final String ACCESS_TOKEN_COOKIE = "lms_access_token";
-    public static final String REFRESH_TOKEN_COOKIE = "lms_refresh_token";
+    private static final String LEGACY_ACCESS_TOKEN_COOKIE = "lms_access_token";
+    private static final String LEGACY_REFRESH_TOKEN_COOKIE = "lms_refresh_token";
 
     @Value("${auth.cookie.secure:false}")
     private boolean secure;
@@ -30,19 +31,21 @@ public class AuthCookieService {
     @Value("${jwt.refreshable-duration}")
     private long refreshTokenDuration;
 
-    public HttpHeaders sessionHeaders(AuthenticationResult result) {
+    public HttpHeaders sessionHeaders(AuthenticationResult result, ClientPortal portal) {
         HttpHeaders headers = noStoreHeaders();
         headers.add(HttpHeaders.SET_COOKIE,
-                cookie(ACCESS_TOKEN_COOKIE, result.accessToken(), accessTokenDuration).toString());
+                cookie(portal.accessTokenCookie(), result.accessToken(), accessTokenDuration).toString());
         headers.add(HttpHeaders.SET_COOKIE,
-                cookie(REFRESH_TOKEN_COOKIE, result.refreshToken(), refreshTokenDuration).toString());
+                cookie(portal.refreshTokenCookie(), result.refreshToken(), refreshTokenDuration).toString());
         return headers;
     }
 
-    public HttpHeaders clearSessionHeaders() {
+    public HttpHeaders clearSessionHeaders(ClientPortal portal) {
         HttpHeaders headers = noStoreHeaders();
-        headers.add(HttpHeaders.SET_COOKIE, cookie(ACCESS_TOKEN_COOKIE, "", 0).toString());
-        headers.add(HttpHeaders.SET_COOKIE, cookie(REFRESH_TOKEN_COOKIE, "", 0).toString());
+        headers.add(HttpHeaders.SET_COOKIE, cookie(portal.accessTokenCookie(), "", 0).toString());
+        headers.add(HttpHeaders.SET_COOKIE, cookie(portal.refreshTokenCookie(), "", 0).toString());
+        headers.add(HttpHeaders.SET_COOKIE, cookie(LEGACY_ACCESS_TOKEN_COOKIE, "", 0).toString());
+        headers.add(HttpHeaders.SET_COOKIE, cookie(LEGACY_REFRESH_TOKEN_COOKIE, "", 0).toString());
         return headers;
     }
 

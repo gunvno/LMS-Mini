@@ -4,12 +4,17 @@ import vn.com.atomi.charge.base.model.response.BaseResponse;
 import vn.com.atomi.charge.base.model.request.BaseRequest;
 import vn.com.atomi.charge.base.service.IBaseService;
 import vn.com.atomi.charge.quiz.mapper.QuizAttemptMapper;
+import vn.com.atomi.charge.quiz.model.dto.QuizAttemptHistoryDto;
 import vn.com.atomi.charge.quiz.model.dto.QuizAttemptDto;
 import vn.com.atomi.charge.quiz.model.entity.QuizAttemptEntity;
 import vn.com.atomi.charge.quiz.repository.QuizAttemptRepository;
+
+import java.util.List;
 
 public interface QuizAttemptService extends IBaseService<QuizAttemptRepository, QuizAttemptDto, QuizAttemptEntity, QuizAttemptMapper> {
     BaseResponse<QuizAttemptDto> startQuiz(String QuizId);
 
     BaseResponse<QuizAttemptDto> submitQuiz(String attemptId, BaseRequest<QuizAttemptDto> request);
+
+    BaseResponse<List<QuizAttemptHistoryDto>> getMyAttemptHistory(String quizId);
 }

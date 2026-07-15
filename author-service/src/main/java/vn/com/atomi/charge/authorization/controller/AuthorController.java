@@ -135,6 +135,11 @@ public class AuthorController {
 		return authorService.getUserPermissions(userId);
 	}
 
+	@GetMapping("/internal/v1/users/{userId}/roles")
+	public BaseResponse<List<String>> getInternalUserRoles(@PathVariable String userId) {
+		return authorService.getUserRoles(userId);
+	}
+
 	@GetMapping("/internal/v1/roles/{roleCode}/users")
 	public BaseResponse<List<String>> getUsersByRole(@PathVariable String roleCode) {
 		return authorService.getUsersByRole(roleCode);

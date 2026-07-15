@@ -14,6 +14,7 @@ import vn.com.atomi.charge.quiz.mapper.QuizAttemptMapper;
 import vn.com.atomi.charge.quiz.model.dto.EnrollmentDto;
 import vn.com.atomi.charge.quiz.model.dto.QuizAttemptAnswerInputDto;
 import vn.com.atomi.charge.quiz.model.dto.QuizAttemptDto;
+import vn.com.atomi.charge.quiz.model.dto.QuizAttemptHistoryDto;
 import vn.com.atomi.charge.quiz.model.entity.AnswerEntity;
 import vn.com.atomi.charge.quiz.model.entity.QuestionEntity;
 import vn.com.atomi.charge.quiz.model.entity.QuizAttemptEntity;
@@ -209,6 +210,43 @@ public class QuizAttemptServiceImpl extends BaseService<QuizAttemptRepository, Q
         response.setData(result);
         response.setStatus(HttpStatus.OK);
         return response;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BaseResponse<List<QuizAttemptHistoryDto>> getMyAttemptHistory(String quizId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userId = authentication == null ? null : authentication.getName();
+        if (quizId == null || quizId.isBlank() || userId == null || userId.isBlank()) {
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("quiz.not_found"));
+        }
+
+        Optional<QuizEntity> optionalQuiz = quizRepository.findEntityById(quizId);
+        if (optionalQuiz.isEmpty()) {
+            return BaseResponse.fail(HttpStatus.BAD_REQUEST, i18n.getMessage("quiz.not_found"));
+        }
+        ownershipService.assertCanViewQuiz(optionalQuiz.get());
+
+        List<QuizAttemptEntity> attempts = repository
+                .findByQuizIdAndUserIdAndStatusAndScoreIsNotNullAndPassedIsNotNullAndSubmittedAtIsNotNullAndDeletedAtIsNullOrderBySubmittedAtDesc(
+                        quizId,
+                        userId,
+                        QuizAttemptStatus.SUBMITTED);
+        int totalAttempts = attempts.size();
+        List<QuizAttemptHistoryDto> history = new ArrayList<>(totalAttempts);
+        for (int index = 0; index < totalAttempts; index++) {
+            QuizAttemptEntity attempt = attempts.get(index);
+            QuizAttemptHistoryDto item = new QuizAttemptHistoryDto();
+            item.setId(attempt.getId());
+            item.setAttemptNumber(totalAttempts - index);
+            item.setScore(attempt.getScore());
+            item.setPassed(attempt.getPassed());
+            item.setStartedAt(attempt.getStartedAt());
+            item.setSubmittedAt(attempt.getSubmittedAt());
+            item.setStatus(attempt.getStatus());
+            history.add(item);
+        }
+        return BaseResponse.success(HttpStatus.OK, history);
     }
 
     static BigDecimal calculatePercentageScore(BigDecimal earnedScore, BigDecimal maximumScore) {

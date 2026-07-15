@@ -17,6 +17,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
+import vn.com.atomi.charge.base.i18n.IMessageService;
 import vn.com.atomi.charge.base.model.enums.CustomHeader;
 import vn.com.atomi.charge.base.util.Util;
 
@@ -34,6 +35,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AuthHeaderFilter extends OncePerRequestFilter {
 
+    private final IMessageService messageService;
+
     @Value("${internal.service-key:}")
     private String internalServiceKey;
 
@@ -49,7 +52,8 @@ public class AuthHeaderFilter extends OncePerRequestFilter {
                 SecurityContextHolder.clearContext();
                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                 response.setContentType("application/json;charset=UTF-8");
-                response.getWriter().write("{\"status\":\"FORBIDDEN\",\"message\":\"common.access_denied\"}");
+                response.getWriter().write("{\"status\":\"FORBIDDEN\",\"message\":\""
+                        + messageService.getMessage("security.access_denied") + "\"}");
                 return;
             }
             try {

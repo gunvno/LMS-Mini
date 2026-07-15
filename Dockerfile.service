@@ -3,23 +3,24 @@ WORKDIR /workspace
 
 ARG SERVICE_NAME
 
+COPY --chmod=755 docker/mvn-retry.sh /usr/local/bin/mvn-retry
 COPY base-service/pom.xml base-service/pom.xml
 COPY ${SERVICE_NAME}/pom.xml ${SERVICE_NAME}/pom.xml
 
-RUN --mount=type=cache,target=/root/.m2,sharing=locked \
-    cd base-service && mvn -q -DskipTests dependency:go-offline
+RUN --mount=type=cache,id=lms-maven-repository,target=/root/.m2,sharing=locked \
+    cd base-service && mvn-retry -q -DskipTests dependency:go-offline
 
 COPY base-service/src base-service/src
-RUN --mount=type=cache,target=/root/.m2,sharing=locked \
-    cd base-service && mvn -q -DskipTests install
+RUN --mount=type=cache,id=lms-maven-repository,target=/root/.m2,sharing=locked \
+    cd base-service && mvn-retry -q -DskipTests install
 
-RUN --mount=type=cache,target=/root/.m2,sharing=locked \
-    cd ${SERVICE_NAME} && mvn -q -DskipTests dependency:go-offline
+RUN --mount=type=cache,id=lms-maven-repository,target=/root/.m2,sharing=locked \
+    cd ${SERVICE_NAME} && mvn-retry -q -DskipTests dependency:go-offline
 
 COPY ${SERVICE_NAME}/src ${SERVICE_NAME}/src
 
-RUN --mount=type=cache,target=/root/.m2,sharing=locked \
-    cd ${SERVICE_NAME} && mvn -q -DskipTests package
+RUN --mount=type=cache,id=lms-maven-repository,target=/root/.m2,sharing=locked \
+    cd ${SERVICE_NAME} && mvn-retry -q -DskipTests package
 
 FROM eclipse-temurin:17.0.17_10-jre-ubi9-minimal
 ARG SERVICE_NAME

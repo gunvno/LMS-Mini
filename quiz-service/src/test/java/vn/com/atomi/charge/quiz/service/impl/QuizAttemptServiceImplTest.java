@@ -14,6 +14,7 @@ import vn.com.atomi.charge.base.model.request.BaseRequest;
 import vn.com.atomi.charge.quiz.mapper.QuizAttemptMapper;
 import vn.com.atomi.charge.quiz.model.dto.QuizAttemptAnswerInputDto;
 import vn.com.atomi.charge.quiz.model.dto.QuizAttemptDto;
+import vn.com.atomi.charge.quiz.model.dto.QuizAttemptHistoryDto;
 import vn.com.atomi.charge.quiz.model.entity.AnswerEntity;
 import vn.com.atomi.charge.quiz.model.entity.QuestionEntity;
 import vn.com.atomi.charge.quiz.model.entity.QuizAttemptEntity;
@@ -29,6 +30,7 @@ import vn.com.atomi.charge.quiz.repository.QuizRepository;
 import vn.com.atomi.charge.quiz.service.internal.QuizConfigurationValidator;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -171,6 +173,41 @@ class QuizAttemptServiceImplTest {
         verify(eventPublisher).publishEvent(any(CourseCompletionEvaluationEvent.class));
     }
 
+    @Test
+    void shouldReturnOnlyCurrentStudentsSubmittedAttemptsNewestFirst() {
+        QuizEntity quiz = new QuizEntity();
+        quiz.setId("quiz-1");
+        quiz.setCourseId("course-1");
+        quiz.setStatus(QuizStatus.ACTIVE);
+
+        QuizAttemptEntity newest = submittedAttempt(
+                "attempt-2",
+                "85.50",
+                true,
+                LocalDateTime.of(2026, 7, 15, 9, 0));
+        QuizAttemptEntity oldest = submittedAttempt(
+                "attempt-1",
+                "60.00",
+                false,
+                LocalDateTime.of(2026, 7, 14, 9, 0));
+
+        when(quizRepository.findEntityById("quiz-1")).thenReturn(Optional.of(quiz));
+        when(attemptRepository.findByQuizIdAndUserIdAndStatusAndScoreIsNotNullAndPassedIsNotNullAndSubmittedAtIsNotNullAndDeletedAtIsNullOrderBySubmittedAtDesc(
+                "quiz-1", "student-1", QuizAttemptStatus.SUBMITTED))
+                .thenReturn(List.of(newest, oldest));
+
+        List<QuizAttemptHistoryDto> history = service.getMyAttemptHistory("quiz-1").getData();
+
+        assertThat(history).hasSize(2);
+        assertThat(history.get(0).getId()).isEqualTo("attempt-2");
+        assertThat(history.get(0).getAttemptNumber()).isEqualTo(2);
+        assertThat(history.get(0).getScore()).isEqualByComparingTo("85.50");
+        assertThat(history.get(0).getPassed()).isTrue();
+        assertThat(history.get(1).getId()).isEqualTo("attempt-1");
+        assertThat(history.get(1).getAttemptNumber()).isEqualTo(1);
+        verify(ownershipService).assertCanViewQuiz(quiz);
+    }
+
     private QuestionEntity question(String id, String score) {
         QuestionEntity question = new QuestionEntity();
         question.setId(id);
@@ -190,5 +227,21 @@ class QuizAttemptServiceImplTest {
         answer.setQuestionId(questionId);
         answer.setAnswerId(answerId);
         return answer;
+    }
+
+    private QuizAttemptEntity submittedAttempt(String id,
+                                                String score,
+                                                boolean passed,
+                                                LocalDateTime submittedAt) {
+        QuizAttemptEntity attempt = new QuizAttemptEntity();
+        attempt.setId(id);
+        attempt.setQuizId("quiz-1");
+        attempt.setUserId("student-1");
+        attempt.setScore(new BigDecimal(score));
+        attempt.setPassed(passed);
+        attempt.setStartedAt(submittedAt.minusMinutes(10));
+        attempt.setSubmittedAt(submittedAt);
+        attempt.setStatus(QuizAttemptStatus.SUBMITTED);
+        return attempt;
     }
 }

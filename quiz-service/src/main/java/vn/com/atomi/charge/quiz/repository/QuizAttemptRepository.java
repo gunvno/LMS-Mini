@@ -4,6 +4,7 @@ import vn.com.atomi.charge.base.repository.BaseRepository;
 import vn.com.atomi.charge.quiz.model.entity.QuizAttemptEntity;
 import vn.com.atomi.charge.quiz.model.enums.QuizAttemptStatus;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface QuizAttemptRepository extends BaseRepository<QuizAttemptEntity, String> {
@@ -13,5 +14,11 @@ public interface QuizAttemptRepository extends BaseRepository<QuizAttemptEntity,
 			String quizId,
 			String userId,
 			QuizAttemptStatus status);
+
+	List<QuizAttemptEntity> findByQuizIdAndUserIdAndStatusAndScoreIsNotNullAndPassedIsNotNullAndSubmittedAtIsNotNullAndDeletedAtIsNullOrderBySubmittedAtDesc(
+			String quizId,
+			String userId,
+			QuizAttemptStatus status);
+
 	boolean existsByQuizIdAndUserIdAndPassedTrueAndDeletedAtIsNull(String quizId, String userId);
 }

@@ -95,7 +95,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<BaseResponse<Void>> handleAccessDenied(AccessDeniedException ex) {
         log.warn("Access denied: {}", Util.beautyError(ex));
         return createErrorResponse(BaseErrorCode.FORBIDDEN,
-                messageService.getMessage("common.access_denied"), HttpStatus.FORBIDDEN);
+                messageService.getMessage("security.access_denied"), HttpStatus.FORBIDDEN);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

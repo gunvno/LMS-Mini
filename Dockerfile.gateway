@@ -1,13 +1,14 @@
 FROM maven:3.9.9-eclipse-temurin-17 AS build
 WORKDIR /workspace
 
+COPY --chmod=755 docker/mvn-retry.sh /usr/local/bin/mvn-retry
 COPY api-gateway/pom.xml api-gateway/pom.xml
-RUN --mount=type=cache,target=/root/.m2,sharing=locked \
-    cd api-gateway && mvn -q -DskipTests dependency:go-offline
+RUN --mount=type=cache,id=lms-maven-repository,target=/root/.m2,sharing=locked \
+    cd api-gateway && mvn-retry -q -DskipTests dependency:go-offline
 
 COPY api-gateway/src api-gateway/src
-RUN --mount=type=cache,target=/root/.m2,sharing=locked \
-    cd api-gateway && mvn -q -DskipTests package
+RUN --mount=type=cache,id=lms-maven-repository,target=/root/.m2,sharing=locked \
+    cd api-gateway && mvn-retry -q -DskipTests package
 
 FROM eclipse-temurin:17.0.17_10-jre-ubi9-minimal
 ENV TZ=Asia/Ho_Chi_Minh

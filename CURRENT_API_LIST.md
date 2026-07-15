@@ -239,6 +239,7 @@ Gateway prefix: `/quiz`.
 |---|---|---|---|
 | POST | `/quiz/api/v1/quizzes/{id}/attempts` | `/api/v1/quizzes/{id}/attempts` | User hiện tại bắt đầu làm quiz |
 | POST | `/quiz/api/v1/quiz-attempts/{id}/submit` | `/api/v1/quiz-attempts/{id}/submit` | User hiện tại nộp bài quiz |
+| GET | `/quiz/api/v1/quizzes/{id}/attempts/me` | `/api/v1/quizzes/{id}/attempts/me` | User hiện tại xem lịch sử điểm từng lần làm quiz |
 
 ### Quiz Internal API
 

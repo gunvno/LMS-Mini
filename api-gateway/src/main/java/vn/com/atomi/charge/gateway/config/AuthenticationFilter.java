@@ -46,7 +46,9 @@ public class AuthenticationFilter implements WebFilter {
   @Value("${internal.service-key:}")
   private String internalServiceKey;
 
-  private static final String ACCESS_TOKEN_COOKIE = "lms_access_token";
+  private static final String CLIENT_PORTAL_HEADER = "X-Client-Portal";
+  private static final String STUDENT_ACCESS_TOKEN_COOKIE = "lms_student_access_token";
+  private static final String ADMIN_ACCESS_TOKEN_COOKIE = "lms_admin_access_token";
 
   @Override
   @NonNull
@@ -60,12 +62,13 @@ public class AuthenticationFilter implements WebFilter {
       return chain.filter(exchange);
     }
     ServerHttpRequest request = exchange.getRequest();
-    String token = resolveAccessToken(request);
+    String portal = resolvePortal(request);
+    String token = resolveAccessToken(request, portal);
     if (!StringUtils.hasText(token)) {
       return chain.filter(exchange);
     }
 
-    return Mono.fromCallable(() -> resolveAuthenticatedUser(token))
+    return Mono.fromCallable(() -> resolveAuthenticatedUser(token, portal))
         .subscribeOn(Schedulers.boundedElastic())
         .flatMap(resolved -> resolved.authenticated()
             ? filterAuthenticated(exchange, chain, resolved)
@@ -81,15 +84,16 @@ public class AuthenticationFilter implements WebFilter {
         resolved.encodedUser(),
         resolved.permissions(),
         resolved.context(),
+        resolved.portal(),
         chain);
   }
 
-  private AuthenticatedRequest resolveAuthenticatedUser(String token) {
-    if (!isTokenValid(token)) {
+  private AuthenticatedRequest resolveAuthenticatedUser(String token, String portal) {
+    if (!StringUtils.hasText(portal) || !isTokenValid(token, portal)) {
       return AuthenticatedRequest.invalid();
     }
     try {
-      UserDto user = getUserInfo(token);
+      UserDto user = getUserInfo(token, portal);
       if (user == null) {
         return AuthenticatedRequest.invalid();
       }
@@ -100,7 +104,7 @@ public class AuthenticationFilter implements WebFilter {
       SecurityContext context = new SecurityContextImpl(authentication);
       String encodedUser = Base64.getEncoder()
           .encodeToString(JsonUtil.convertObjectToJson(user).getBytes(StandardCharsets.UTF_8));
-      return new AuthenticatedRequest(true, user, permissions, context, encodedUser);
+      return new AuthenticatedRequest(true, user, permissions, context, encodedUser, portal);
     } catch (Exception exception) {
       log.warn("Unable to resolve authenticated user: {}", exception.getMessage());
       return AuthenticatedRequest.invalid();
@@ -112,15 +116,16 @@ public class AuthenticationFilter implements WebFilter {
       UserDto user,
       List<String> permissions,
       SecurityContext context,
-      String encodedUser) {
+      String encodedUser,
+      String portal) {
 
     private static AuthenticatedRequest invalid() {
-      return new AuthenticatedRequest(false, null, List.of(), null, null);
+      return new AuthenticatedRequest(false, null, List.of(), null, null, null);
     }
   }
 
   private Mono<Void> forward(ServerWebExchange exchange, UserDto user, String encodedUser,
-                             List<String> permissions, SecurityContext context,
+                             List<String> permissions, SecurityContext context, String portal,
                              WebFilterChain chain) {
     ServerHttpRequest newRequest = exchange.getRequest().mutate()
         .headers(headers -> {
@@ -129,6 +134,7 @@ public class AuthenticationFilter implements WebFilter {
           headers.set("X-Role-Code", user.getRoleCode());
           headers.set("X-Permissions", String.join(",", permissions));
           headers.set("X-Internal-Service-Key", internalServiceKey);
+          headers.set(CLIENT_PORTAL_HEADER, portal);
         })
         .build();
 
@@ -150,13 +156,48 @@ public class AuthenticationFilter implements WebFilter {
     return response.setComplete();
   }
 
-  private String resolveAccessToken(ServerHttpRequest request) {
+  private String resolveAccessToken(ServerHttpRequest request, String portal) {
     String authorization = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
     if (StringUtils.hasText(authorization) && authorization.startsWith("Bearer ")) {
       return authorization.substring(7);
     }
-    HttpCookie cookie = request.getCookies().getFirst(ACCESS_TOKEN_COOKIE);
+    String cookieName = "ADMIN".equals(portal)
+        ? ADMIN_ACCESS_TOKEN_COOKIE
+        : "STUDENT".equals(portal) ? STUDENT_ACCESS_TOKEN_COOKIE : null;
+    if (cookieName == null) {
+      return null;
+    }
+    HttpCookie cookie = request.getCookies().getFirst(cookieName);
     return cookie == null ? null : cookie.getValue();
+  }
+
+  private String resolvePortal(ServerHttpRequest request) {
+    String portal = normalizePortal(request.getHeaders().getFirst(CLIENT_PORTAL_HEADER));
+    if (portal != null) {
+      return portal;
+    }
+    portal = normalizePortal(request.getQueryParams().getFirst("portal"));
+    if (portal != null) {
+      return portal;
+    }
+    String origin = request.getHeaders().getOrigin();
+    if (StringUtils.hasText(origin)) {
+      if (origin.matches("https?://localhost:3000/?")) {
+        return "ADMIN";
+      }
+      if (origin.matches("https?://localhost:3001/?")) {
+        return "STUDENT";
+      }
+    }
+    return null;
+  }
+
+  private String normalizePortal(String value) {
+    if (!StringUtils.hasText(value)) {
+      return null;
+    }
+    String normalized = value.trim().toUpperCase();
+    return "ADMIN".equals(normalized) || "STUDENT".equals(normalized) ? normalized : null;
   }
 
   private boolean isPublicAuthPath(String path) {
@@ -184,18 +225,18 @@ public class AuthenticationFilter implements WebFilter {
         || path.startsWith("/authn/api/v1/auth/forgot-password/");
   }
 
-  private boolean isTokenValid(String token) {
+  private boolean isTokenValid(String token, String portal) {
     try {
       BaseResponseDto<IntrospectResponseDto> response =
-          authnClient.introspect(new IntrospectRequestDto(token));
+          authnClient.introspect(portal, new IntrospectRequestDto(token));
       return response != null && response.getData() != null && response.getData().isValid();
     } catch (Exception e) {
       return false;
     }
   }
 
-  private UserDto getUserInfo(String token) {
-    BaseResponseDto<AuthnUserInfoDto> response = authnClient.getUserInfo(token);
+  private UserDto getUserInfo(String token, String portal) {
+    BaseResponseDto<AuthnUserInfoDto> response = authnClient.getUserInfo(portal, token);
     if (response == null || response.getData() == null) {
       return null;
     }

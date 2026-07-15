@@ -15,7 +15,7 @@ public enum BaseErrorCode {
     METHOD_NOT_ALLOWED("EV-405"),
     FAILURE("EV-999"),
     COMMON_ERROR("common.internal_error"),
-    ACCESS_DENIED("common.access_denied"),
+    ACCESS_DENIED("security.access_denied"),
     ;
 
     private final String errorCode;
