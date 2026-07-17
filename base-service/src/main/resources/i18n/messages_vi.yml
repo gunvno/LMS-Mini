@@ -11,7 +11,7 @@ common:
   already_exists: "Dữ liệu đã tồn tại"
   not_found: "Không tìm thấy dữ liệu"
   invalid_input: "Kiểm tra lại thông tin nhập"
-  max_file_size_exceed: "Kích thước ảnh tối đa: 5MB"
+  max_file_size_exceed: "Tệp tải lên vượt quá giới hạn kích thước cho phép"
   operation_failed: "Không thể hoàn tất yêu cầu. Vui lòng thử lại sau"
   method_not_allowed: "Phương thức yêu cầu không được hỗ trợ"
 

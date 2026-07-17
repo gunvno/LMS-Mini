@@ -1,0 +1,7 @@
+# Imported after application-base.yaml so this service-specific limit takes precedence.
+spring:
+  servlet:
+    multipart:
+      max-file-size: 200MB
+      # Keep room for multipart boundaries and the accompanying form fields.
+      max-request-size: 210MB

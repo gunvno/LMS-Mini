@@ -11,7 +11,7 @@ common:
   already_exists: "Data already exists"
   not_found: "Data not found"
   invalid_input: "Please check the input information"
-  max_file_size_exceed: "Maximum file size: 5MB"
+  max_file_size_exceed: "The uploaded file exceeds the allowed size limit"
   operation_failed: "We could not complete your request. Please try again later"
   method_not_allowed: "The request method is not supported"
 

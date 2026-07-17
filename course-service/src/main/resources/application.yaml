@@ -17,7 +17,9 @@ spring:
   application:
     name: lms-course-service
   config:
-    import: optional:classpath:application-base.yaml
+    import:
+      - optional:classpath:application-base.yaml
+      - classpath:application-course-upload.yaml
   datasource:
     driverClassName: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://127.0.0.1:3306/lms_course_service?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh
@@ -45,11 +47,6 @@ spring:
       ddl-auto: none
     show-sql: false
     open-in-view: false
-  servlet:
-    multipart:
-      max-file-size: 200MB
-      max-request-size: 200MB
-
 config:
   service-name: lms-course-service
   api:

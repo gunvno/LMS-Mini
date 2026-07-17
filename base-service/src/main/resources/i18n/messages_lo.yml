@@ -11,7 +11,7 @@ common:
   already_exists: "ຂໍ້ມູນມີຢູ່ແລ້ວ"
   not_found: "ບໍ່ພົບຂໍ້ມູນ"
   invalid_input: "ກະລຸນາກວດສອບຂໍ້ມູນທີ່ປ້ອນ"
-  max_file_size_exceed: "ຂະໜາດຮູບສູງສຸດ: 5MB"
+  max_file_size_exceed: "ຂະໜາດໄຟລ໌ທີ່ອັບໂຫຼດເກີນຂີດຈຳກັດທີ່ອະນຸຍາດ"
   operation_failed: "ບໍ່ສາມາດດໍາເນີນຄໍາຮ້ອງຂໍໄດ້. ກະລຸນາລອງໃໝ່"
   method_not_allowed: "ບໍ່ຮອງຮັບວິທີການຮ້ອງຂໍນີ້"
 
